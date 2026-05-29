@@ -18,8 +18,8 @@ pub use show::run_show;
 
 use anyhow::Result;
 
-pub fn run_serve(_port: Option<u16>) -> Result<()> {
-    println!("Web UI server will be available in Phase 2.");
-    println!("For now, use CLI commands: scan, list, show, export, demo");
+pub async fn run_serve(port: Option<u16>) -> Result<()> {
+    let config = ccmemo_core::service::config::Config::load()?;
+    ccmemo_core::server::start_server(&config, port).await?;
     Ok(())
 }

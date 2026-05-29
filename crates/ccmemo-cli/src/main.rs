@@ -118,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
             format,
             safe,
         } => commands::run_export(&session_id, &format, safe),
-        Commands::Serve { port } => commands::run_serve(port),
+        Commands::Serve { port } => commands::run_serve(port).await,
         Commands::Demo => commands::run_demo(),
         Commands::Config { action } => match action {
             ConfigAction::Get { key } => commands::run_config_get(&key),

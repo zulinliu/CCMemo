@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### Phase 1: Core Engine + CLI
 **Mode:** mvp
-**Goal:** Users can scan their Claude Code transcripts, store them in a local database, and interact with session data entirely through the command line
+**Goal:** **As a** Claude Code developer, **I want to** scan my transcript files and browse session data from the command line, **so that** I can find and revisit past coding sessions without digging through raw JSONL files.
 **Depends on**: Nothing (first phase)
 **Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04, SCAN-05, SCAN-06, SCAN-07, STOR-01, STOR-02, STOR-03, STOR-04, STOR-05, CLIC-01, CLIC-02, CLIC-03, CLIC-04, CLIC-05, CLIC-06, CLIC-09, CLIC-10
 **Success Criteria** (what must be TRUE):
@@ -36,9 +36,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Storage layer -- SQLite schema, repository traits, connection management (WAL, busy_timeout, FTS5 + jieba-rs)
-- [ ] 01-02: Scanner + parser -- directory discovery, JSONL streaming via claude-code-transcripts, incremental scan, session status detection
-- [ ] 01-03: CLI commands -- clap setup with scan/list/show/resume/export/serve/demo/config/doctor subcommands
+- [ ] 01-01-PLAN.md -- Walking Skeleton: project scaffold + storage layer (SQLite WAL, 6-table schema, FTS5, jieba-rs) + demo data + list command
+- [ ] 01-02-PLAN.md -- Real scanner: streaming JSONL parser + claude-code-transcripts Entry mapping + project discovery + session indexer + scan command
+- [ ] 01-03-PLAN.md -- Complete CLI: show/resume/export/config/doctor commands with service logic (serve stub for Phase 2)
 
 ### Phase 2: Web Server + API
 **Mode:** mvp
@@ -102,7 +102,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Engine + CLI | 0/3 | Not started | - |
+| 1. Core Engine + CLI | 0/3 | Planning complete | - |
 | 2. Web Server + API | 0/3 | Not started | - |
 | 3. React Web UI + Search | 0/3 | Not started | - |
 | 4. Export + AI Analysis + Skill Forge | 0/3 | Not started | - |

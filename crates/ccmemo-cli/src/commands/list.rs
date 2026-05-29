@@ -2,7 +2,7 @@ use anyhow::Result;
 use ccmemo_core::domain::types::{SessionQuery, SessionStatus};
 use ccmemo_core::service::config::Config;
 use ccmemo_core::storage::sqlite::Database;
-use ccmemo_core::storage::SessionRepository;
+use ccmemo_core::storage::{ProjectRepository, SessionRepository};
 
 pub fn run_list(
     query: Option<&str>,
@@ -43,13 +43,18 @@ pub fn run_list(
         return Ok(());
     }
 
+    // Build project name lookup
+    let projects = db.get_all()?;
+    let project_names: std::collections::HashMap<String, &str> = projects.iter()
+        .map(|p| (p.id.clone(), p.name.as_str()))
+        .collect();
+
     let term = console::Term::stdout();
     let is_tty = term.is_term();
 
-    // Header
     if is_tty {
         term.write_line(&format!(
-            "{:<10} {:<42} {:<20} {:<14} {:<20}",
+            "{:<10} {:<42} {:<18} {:<14} {:<20}",
             "ID", "Title", "Project", "Status", "Last Updated"
         ))?;
         term.write_line(&"-".repeat(106))?;
@@ -59,8 +64,8 @@ pub fn run_list(
         let id = &session.session_id[..8.min(session.session_id.len())];
         let title = truncate(&session.auto_title, 40);
         let project_name = truncate(
-            &session.project_id.trim_start_matches("demo-project-"),
-            18,
+            project_names.get(&session.project_id).copied().unwrap_or(&session.project_id),
+            16,
         );
 
         let status_str = if is_tty {
@@ -79,7 +84,7 @@ pub fn run_list(
 
         if is_tty {
             term.write_line(&format!(
-                "{:<10} {:<42} {:<20} {:<14} {:<20}",
+                "{:<10} {:<42} {:<18} {:<14} {:<20}",
                 id, title, project_name, status_str, last_updated
             ))?;
         } else {
@@ -97,10 +102,11 @@ pub fn run_list(
 }
 
 fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
+    if s.chars().count() <= max {
         s.to_string()
     } else {
-        format!("{}...", &s[..max - 3])
+        let truncated: String = s.chars().take(max - 3).collect();
+        format!("{truncated}...")
     }
 }
 

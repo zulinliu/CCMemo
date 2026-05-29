@@ -1,15 +1,12 @@
 pub mod demo;
 pub mod list;
+pub mod scan;
 
 pub use demo::run_demo;
 pub use list::run_list;
+pub use scan::run_scan;
 
 use anyhow::Result;
-
-pub fn run_scan(_full: bool) -> Result<()> {
-    println!("Scan command not yet implemented. Run 'ccmemo demo' to load sample data.");
-    Ok(())
-}
 
 pub fn run_show(_session_id: &str) -> Result<()> {
     println!("Show command not yet implemented.");

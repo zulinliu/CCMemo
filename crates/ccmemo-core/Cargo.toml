@@ -1,0 +1,26 @@
+[package]
+name = "ccmemo-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rusqlite = { version = "0.32", default-features = false, features = ["bundled", "array", "backup", "blob", "modern_sqlite", "chrono", "collation", "column_decltype", "csvtab", "functions", "hooks", "i128_blob", "limits", "load_extension", "serde_json", "series", "time", "trace", "unlock_notify", "url", "uuid", "vtab", "window"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+jieba-rs = { version = "0.7", features = ["tfidf"] }
+sha2 = "0.10"
+walkdir = "2"
+toml = "0.8"
+dirs = "6"
+percent-encoding = "2"
+regex = "1"
+
+[dev-dependencies]
+tempfile = "3"

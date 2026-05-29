@@ -1,0 +1,695 @@
+# CCMemo 设计方案
+
+版本：v1.1（评审优化版）
+日期：2026-05-29
+状态：设计方案
+
+## 1. 项目定位
+
+### 1.1 名称与简介
+
+**CCMemo**
+
+英文：
+
+> CCMemo turns your Claude Code sessions into lasting engineering memory — searchable, resumable, and forgeable into reusable playbooks and professional skills.
+
+中文：
+
+> CCMemo 把 Claude Code 会话变成持久的工程记忆，帮你管理历史会话、导出完整记录（含思考过程）、将成功的会话经验转化为专业方案文档和可复用的 Agent Skill。
+
+### 1.2 核心定位
+
+CCMemo 解决的核心问题：
+
+```text
+每次 AI 编程会话都包含宝贵的思考过程、决策逻辑和问题解决经验，
+但这些经验散落在 JSONL 文件中，无法被搜索、无法被复用、无法被迁移。
+CCMemo 把这些经验变成工程资产。
+```
+
+**与 Claude Code 官方能力的差异**：Claude Code 有基础的会话管理（`--resume`、交互式选择器、`/export`），但全是 CLI 操作，没有可视化界面，没有跨项目全局搜索，没有完整思考过程导出，没有 AI 总结和方案生成，没有 Skill 提炼能力。CCMemo 的核心差异化是**把 CLI 的会话管理变成可视化操作，并把会话经验锻造成可复用的工程资产**。
+
+### 1.3 三大核心能力
+
+| 能力 | 一句话描述 | 解决的痛点 |
+|---|---|---|
+| **会话可视化管理** | 跨项目搜索、浏览、恢复所有 Claude Code 会话 | 找不到历史会话、恢复困难、JSONL 不可读 |
+| **AI 智能分析 → 专业方案** | 对完整会话记录做深度分析，生成 PRD、技术方案、Bug 修复 Runbook | 会话经验无法沉淀为可复用的专业材料 |
+| **会话经验 → 专业 Skill** | 从解决问题的会话中提炼经验，生成可安装、可迁移的新 Skill | 同类问题每次重复盲目迭代 |
+
+### 1.4 设计原则
+
+1. **可视化优先**：终极目标是提供直观的可视化界面，v0.1 即含极简 Web UI。
+2. **完整记录优先**：导出必须包含完整的思考过程（需求澄清、决策逻辑、弯路记录）。
+3. **证据优先**：原始 transcript 是事实源，AI 总结必须可追溯原文。
+4. **本地优先**：默认不上传、不共享、不调用外部 AI（总结和 Skill 生成由用户主动触发）。
+5. **技能化复用**：经验不只停留在文档，要能变成 Agent 可自动执行的 Skill。
+
+### 1.5 技术栈
+
+| 层 | 选型 | 说明 |
+|---|---|---|
+| Core Engine | Rust | 基于 `claude-code-transcripts` crate |
+| CLI | Rust clap | 单 binary 分发 |
+| 本地 API + Web | Axum（v0.1-v0.3）→ Tauri commands（v0.4+） | 前后端解耦 |
+| 数据库 | SQLite + FTS5（rusqlite bundled-full，WAL 模式） | |
+| Desktop | Tauri v2 | Rust Core 直接复用 |
+| UI | React + TypeScript + Vite + Tailwind | 前端不碰 Rust |
+| AI Provider | 可插拔 adapter（reqwest） | 首版 Claude API |
+| 许可证 | **Apache 2.0** | 与 Rust 生态一致 |
+
+## 2. 用户与场景
+
+### 2.1 核心用户
+
+| 用户 | 核心需求 |
+|---|---|
+| Claude Code 高频开发者 | 快速找回历史会话、恢复上下文、导出完整记录 |
+| 技术负责人/架构师 | 把会话转化为可分享的技术方案，沉淀团队最佳实践 |
+| Skill/Agent 工作流构建者 | 从成功会话提炼 Skill，避免每次重复摸索 |
+
+### 2.2 核心场景
+
+**场景 A：恢复昨天中断的任务**
+
+```text
+打开 CCMemo → Today 页面看到最近会话 → 查看摘要 → Safe Resume 检查
+→ 复制平台命令 → 在终端恢复 Claude Code 会话
+```
+
+**场景 B：把需求讨论会话转化为专业 PRD**
+
+```text
+找到需求讨论会话 → 选择"生成专业方案" → 选择 PRD 模板
+→ AI 分析完整会话（含需求澄清过程）→ 生成 PRD → 编辑 → 导出
+```
+
+**场景 C：从 Bug 修复会话提炼 Skill**
+
+```text
+找到成功的 Bug 修复会话 → 选择"提炼 Skill"
+→ 分析成功路径（诊断→定位→修复→验证）→ 生成 SKILL.md
+→ 审核 → 安装到 skills 目录
+→ 下次遇到类似 Bug，Skill 自动加载，避免重复盲目迭代
+```
+
+**场景 D：导出完整会话记录**
+
+```text
+选择会话 → 选择"完整导出" → 脱敏预览（高亮敏感信息）
+→ 确认后导出 Markdown（含完整思考过程和决策逻辑）
+```
+
+**场景 E：把学习新技术栈的会话变成知识笔记**
+
+```text
+找到学习会话 → 选择"学习笔记"模板 → AI 提炼关键知识点和代码示例
+→ 导出为结构化笔记 → 后续随时查阅
+```
+
+## 3. 功能设计
+
+### 3.1 会话扫描与索引
+
+#### 核心能力
+
+- 只读扫描 Claude Code 本地 transcript 文件（`~/.claude/projects/`）
+- 不改写原始 transcript，不删除原始 transcript
+- 增量扫描（支持活跃会话正在 append）
+- 流式 JSONL 解析，恒定内存
+- 半行 JSON 容错、未知事件类型容错、损坏行跳过
+
+#### JSONL Parser
+
+**推荐直接基于 `claude-code-transcripts` crate**（crates.io 已验证存在），它提供强类型 Entry 变体，省去自建 parser 的 2-3 周工期。
+
+**容错**：UTF-8 解码 + replacement character；半行 JSON 缓存续读；损坏行记录行号跳过。
+
+**并发写入**：Windows 使用 `FILE_SHARE_READ`（通过 `fs4` crate）；POSIX advisory 锁。
+
+**路径发现策略**（⚠ 关键改进）：不依赖逆向工程的路径编码规则（已知有碰撞 bug [#40946](https://github.com/anthropics/claude-code/issues/40946)），改为扫描 `~/.claude/projects/` 下所有实际子目录，与 JSONL 文件内容中的项目路径字段交叉验证，建立 `encodedFolder → realPath` 映射表。
+
+#### 会话状态判定
+
+| 状态 | 判定标准 |
+|---|---|
+| 进行中 | 最后事件在 2 小时内，且最后一条为 assistant 响应 |
+| 已完成 | 超过 7 天无活动，或用户标记完成 |
+| 已中断 | 最后一条为 user message 无 assistant 回复 |
+| 不可恢复 | 项目路径不存在 + CLI 不可用 |
+
+#### 自动标题生成
+
+从第一条用户消息截取前 50 字符，去除路径和命令后清理为可读标题。用户可编辑。
+
+### 3.2 会话可视化浏览
+
+#### Session Brief 摘要卡（⚠ 评审优化）
+
+**首屏只展示 4 类核心信息**（避免信息过载）：
+- 自动标题
+- 项目名 + Git 分支
+- 最近更新时间
+- 状态标签
+
+展开/详情中显示：session ID 短码、文件改动数、意图摘要、恢复命令。
+
+主要动作：Open Detail（直接可见）。次要动作（`...` 菜单）：Resume、Copy Command、Export、Generate Playbook、Create Skill。
+
+#### Session Inspector 三栏布局
+
+| 区域 | 内容 |
+|---|---|
+| 左栏：时间线 | 用户消息、工具调用、文件变更、命令、错误、修复 |
+| 中栏：原始内容 | 选中节点的完整原始内容 |
+| 右栏：Session Card | ID、恢复命令、元数据、标签、动作按钮 |
+
+**时间线节点按 5 组分色**（颜色+图标双重编码）：
+- 用户侧（蓝色）：User Prompt
+- AI 响应（绿色）：Assistant Plan
+- 文件操作（黄色）：File Read / File Edit / File Write
+- 命令执行（灰色）：Shell Command / Test Result
+- 异常（红色）：Error / Fix
+
+**响应式断点**：1280px 以下右栏折叠为底部面板；1024px 以下单栏 + Tab 切换。
+
+**长会话性能优化**（500+ 事件）：虚拟滚动（`react-virtuoso`，原生动态高度支持）、连续同类事件折叠、按需加载原始内容、cursor-based 分页 API。
+
+#### 搜索
+
+- 全文搜索（FTS5 + jieba-rs 中文分词，v0.2 引入）
+- 搜索语法：`project:`、`branch:`、`status:`、`after:/before:`、`has:errors`
+- **搜索框 UI**（⚠ 评审优化）：
+  - Placeholder 轮播语法示例
+  - 聚焦时弹出语法帮助面板
+  - 输入 `project:` 时弹出项目列表自动补全
+  - **中文 IME 兼容**：监听 `compositionstart`/`compositionend`，只在组合态结束后才开始防抖
+
+#### Safe Resume
+
+首版 3 项核心检查：项目路径存在 + Claude CLI 可用 + Shell 格式适配（PowerShell/zsh/WSL/Git Bash）。
+
+命令胶囊提供平台切换标签，自动检测当前环境。
+
+### 3.3 完整会话导出
+
+#### 导出价值
+
+导出不是输出 JSONL，而是**把完整的思考过程变成可读、可分享的文档**。包含：
+- 完整的需求澄清讨论（用户的提问和追问过程）
+- Claude 的分析过程（不仅是最终答案）
+- 关键决策点（为什么选 A 不选 B）
+- 失败尝试和弯路
+- 工具调用和文件变更
+
+#### 导出模式
+
+| 模式 | 用途 | 默认策略 |
+|---|---|---|
+| 原始完整导出 | 本地归档、迁移、审计 | 强提示"包含敏感信息"，文件名含 `_UNSAFE_` |
+| 安全分享导出 | 发给同事、公开案例 | 默认脱敏 |
+
+MVP 格式：Markdown、JSONL。
+
+#### 导出安全（⚠ 评审优化）
+
+- 默认导出到项目目录外（避免 `git add .` 意外提交）
+- 导出目录自动创建 `.gitignore`
+- 每次导出附带 manifest（版本、session ID、时间、hash）
+- **轻量水印**：Markdown 末尾加一行 `> Generated by [CCMemo](https://github.com/xxx/ccmemo)`——不侵入内容，提供传播路径
+
+### 3.4 AI 智能分析 → 专业方案
+
+#### 核心价值
+
+不是泛泛的"总结会话"，而是**针对不同场景，从完整会话中提取关键信息，生成结构化专业文档**。
+
+#### 生成流程（⚠ 评审优化：从 8 步简化为 3 步快路径）
+
+**快路径（3 步）**：
+```text
+选择会话 → 选择模板 → 生成（自动脱敏 + 默认 Provider）→ 编辑/导出
+```
+
+**完整路径（首次使用时展示）**：
+```text
+选择会话 → 选择模板 → 脱敏扫描 → 预览发送内容 → 选择 Provider
+→ 生成 → 质量自检 → 编辑 → 导出
+```
+
+单 Provider 时自动跳过选择步骤。高级设置折叠。
+
+#### 生成过程中的用户体验
+
+- 阶段化进度展示（读取会话 → 脱敏 → 发送 → 生成 → 自检）
+- 支持取消
+- 失败后可重试
+
+#### 模板与信息提取策略（4 种）
+
+**Bug 修复 Runbook**：
+
+| 文档章节 | 从会话中提取 |
+|---|---|
+| 症状描述 | 用户最初的问题描述、错误信息 |
+| 诊断过程 | Claude 的分析步骤、排查的文件和命令 |
+| 根因分析 | 最终定位的错误原因 |
+| 修复步骤 | 实际的代码变更 |
+| 验证方法 | 运行的测试、验证命令 |
+| 踩坑记录 | 走过的弯路、失败的方案 |
+
+**技术实现方案**：背景与目标、技术选型理由、架构设计、实现步骤、风险与约束。
+
+**PRD**：用户需求（从需求澄清讨论提取）、功能定义、验收标准、优先级。
+
+**学习笔记**（⚠ 新增）：关键知识点、代码示例、踩坑记录、延伸阅读建议。
+
+#### 总结质量自检
+
+生成后自动检查：是否覆盖了核心需求讨论点、是否遗漏了关键决策、是否有无法追溯原文的断言。
+
+**自检失败不阻断用户**：同时展示自检报告和已生成内容，提供"根据自检结果重新生成"按钮，允许忽略警告直接导出。
+
+### 3.5 会话经验 → 专业 Skill
+
+#### Skill vs Playbook 判断
+
+| 条件 | 适合 Skill | 适合 Playbook |
+|---|---|---|
+| 执行方式 | Agent 可自动执行 | 需要人阅读后手动操作 |
+| 输入输出 | 明确的输入和可验证的输出 | 模糊的指导性文档 |
+| 复用频率 | 同类任务反复出现 | 偶尔参考 |
+
+#### Skill Forge 工作流
+
+```text
+选择会话 → 分析可复用元素 → 提炼触发条件
+→ 生成 Skill Spec（可审阅）→ 编写 SKILL.md → 校验 → 审核 → 安装
+```
+
+#### 成功路径提取
+
+| 元素 | 提取策略 |
+|---|---|
+| 成功路径 | 最终有效的操作序列 |
+| 失败路径 | 尝试过但回退或放弃的操作（作为"避免"信息） |
+| 关键决策 | 用户的选择和 Claude 的建议 |
+| 领域知识 | 特定工具用法、文件格式、API 行为 |
+| 触发条件 | 从具体问题抽象到通用场景（AI 辅助 + 人工审核） |
+
+#### 核心规范（5 条）
+
+1. 命名：小写+数字+连字符，动作导向
+2. 结构：必须 `SKILL.md`，可选 `references/`、`scripts/`、`assets/`
+3. 触发描述优先：所有"何时使用"信息写在 `description`
+4. 上下文精简：不堆砌完整会话
+5. 校验必跑：检查 frontmatter、命名、结构、敏感信息
+
+#### Skill 安全（⚠ 评审优化：Critical）
+
+Skill 的"自动加载执行"特性构成严重供应链攻击面。必须：
+
+1. **安装前强制逐行审核**：用户必须明确确认 SKILL.md 每一行可执行指令
+2. **Prompt injection 检测**：生成时扫描已知注入模式
+3. **安装目录隔离**：不与 Claude Code skills 目录共享，安装到 Claude Code 目录需额外确认
+4. **Hash 校验**：安装时生成 hash，加载时校验完整性
+5. **workflow 限制为结构化格式**（v0.2+）：限制可执行操作类型
+
+#### 静态校验
+
+检查：frontmatter 正确性、命名规范、结构完整、description 含触发场景、无敏感信息（API key/私有路径）。
+
+## 4. UI 与交互设计
+
+### 4.1 设计方向
+
+工程化、冷静、高信息密度。冷灰蓝系主色调，不做泛 AI 紫蓝渐变。
+
+### 4.2 信息架构
+
+```text
+Today / 继续工作
+Sessions / 会话
+  └── 按项目分组的侧边栏
+Playbooks / 复用方案
+Skill Forge / 技能锻造
+Installed Skills / 已安装（管理、卸载）
+Settings / 设置
+```
+
+### 4.3 空状态设计（⚠ 评审新增：P0 优先级）
+
+每个空状态必须包含：图标 + 说明文字 + 引导操作按钮。
+
+| 空状态 | 图标 | 说明 | 引导操作 |
+|---|---|---|---|
+| 首次启动（无会话） | 📂 | "还没有 Claude Code 会话" | 按钮："导入示例会话" / "扫描会话目录" |
+| 搜索无结果 | 🔍 | "没有匹配的会话" | 按钮："尝试简化搜索" / "浏览全部" |
+| 无 AI Provider | 🔒 | "需要配置 AI Provider 才能生成方案" | 按钮："配置 Provider" |
+| Playbooks 为空 | 📝 | "还没有生成过方案文档" | 按钮："浏览会话，生成第一个方案" |
+| 无已安装 Skill | ⚡ | "还没有安装任何 Skill" | 按钮："浏览示例 Skill" / "从会话提炼" |
+
+**首次启动体验**：
+1. 引导选择 Claude Code 配置目录
+2. 自动扫描并展示发现结果
+3. 如果会话 < 5 个，自动提示"导入示例会话"（`ccmemo demo`）
+
+### 4.4 导航
+
+- 顶部固定：全局搜索（`Ctrl+K`）、平台选择、隐私状态、扫描状态
+- `Ctrl+K` 命令面板：resume、export、skill draft、goto today/sessions/settings、toggle theme
+
+### 4.5 主题与无障碍
+
+- Design Token（CSS 变量）、深色/浅色切换跟随 OS
+- 键盘导航、ARIA 标签、高对比度跟随 OS
+- 首版中文 + 英文（react-i18next + rust-i18n）
+
+## 5. 技术架构
+
+### 5.1 架构分层
+
+```text
+UI Layer
+  React Web UI / CLI Output / Tauri Desktop UI（v0.4+）
+
+Service Layer
+  Project Discovery / JSONL Parser / Session Indexer
+  Resume Command Builder / Exporter / Redaction Engine
+  AI Provider Adapter / Summary Generator / Skill Forge Pipeline
+  Configuration Manager
+
+Storage Layer
+  SQLite（WAL）/ FTS5 / Migration / Cache
+```
+
+**前端对接抽象**：
+
+```typescript
+interface ApiClient {
+  getSessions(params: SessionQuery): Promise<PaginatedResult<Session>>;
+  getSession(id: string): Promise<SessionDetail>;
+  getTimeline(id: string, cursor?: string): Promise<PaginatedResult<TimelineEvent>>;
+  subscribeToProgress(callback: (event: ProgressEvent) => void): void; // SSE / Tauri Event
+  // ...
+}
+// v0.1-v0.3: HttpApiClient (fetch → Axum)
+// v0.4+: TauriApiClient (invoke → Tauri commands)
+```
+
+SSE 替代方案已确认：`tauri-plugin-sse` 或 Tauri v2 原生 `app.emit()`。
+
+### 5.2 核心数据模型（⚠ 评审优化：6 表）
+
+#### ProjectIdentity
+
+| 字段 | 说明 |
+|---|---|
+| id | 项目 ID |
+| name | 项目名 |
+| realPath | 真实路径 |
+| normalizedPath | 归一化路径 |
+| encodedFolder | Claude 编码目录（通过目录扫描建立映射） |
+| gitRemote | Git remote |
+| lastActiveAt | 最近活跃时间 |
+
+#### SessionMetadata
+
+| 字段 | 说明 |
+|---|---|
+| sessionId | 会话 ID（PK） |
+| projectId | 所属项目 |
+| autoTitle | 自动标题 |
+| customTitle | 用户标题 |
+| status | 状态 |
+| startedAt / endedAt | 时间范围 |
+| totalInputTokens / totalOutputTokens | Token |
+| model | 模型 |
+| fileCount / toolCallCount / errorCount | 统计 |
+| tags | 用户标签 |
+
+#### TranscriptEvent（⚠ 关键改进）
+
+| 字段 | 说明 |
+|---|---|
+| id | 事件 ID |
+| sessionId | 会话 ID |
+| sequence | 序号 |
+| type | 事件类型 |
+| timestamp | 时间 |
+| **fileOffset** | **字节偏移，O(1) seek 定位原始 JSON** |
+| **byteLength** | **原始 JSON 字节长度** |
+| **preview** | **前 200 字符摘要，时间线渲染用** |
+| rawJsonHash | 原始 JSON hash |
+
+> 没有 `fileOffset`，长会话（500+ 事件）的详情查看需要线性扫描 JSONL 文件，体验极差。这三个字段是性能关键。
+
+#### ToolCall
+
+| 字段 | 说明 |
+|---|---|
+| id | 工具调用 ID |
+| eventId | 关联事件 |
+| toolName | 工具名 |
+| filePath | 文件路径 |
+| inputSummary / outputSummary | 摘要 |
+
+#### Summary
+
+| 字段 | 说明 |
+|---|---|
+| id | 总结 ID |
+| sessionId | 会话 ID |
+| type | 类型（runbook/technical_plan/prd/learning_notes/skill_spec） |
+| content | 内容 |
+| metadata | JSON（模板类型、生成参数等） |
+| model | 生成模型 |
+
+#### ScanBookmark（⚠ 新增）
+
+| 字段 | 说明 |
+|---|---|
+| filePath | transcript 文件路径（PK） |
+| sessionId | 会话 ID |
+| lastIndexedLine | 最后已索引行号 |
+| fileHash | 文件 hash |
+| lastScannedAt | 最后扫描时间 |
+
+### 5.3 索引策略
+
+| 表 | 索引 |
+|---|---|
+| TranscriptEvent | `(sessionId, sequence)`、`(sessionId, type)` |
+| ToolCall | `(eventId)`、`(filePath)` |
+| SessionMetadata | `(status)`、`(projectId)` |
+| FTS5 虚拟表 | session_fts（jieba-rs 中文分词，v0.2 引入） |
+
+jieba-rs 编译增量约 3-5MB，总 binary 约 15-25MB，可接受。英文无 stemming，MVP 够用。
+
+### 5.4 CLI 命令
+
+```bash
+# 会话管理
+ccmemo scan [--full]
+ccmemo list [--query <q>] [--project <id>] [--status <s>] [--limit <n>]
+ccmemo show <session_id>
+ccmemo resume <session_id>
+ccmemo search <query>                     # v0.2
+
+# Web UI
+ccmemo serve [--port <port>]              # v0.1 即含极简 Web
+
+# 导出
+ccmemo export <session_id> --format markdown|jsonl [--safe]
+
+# AI 总结
+ccmemo summarize <session_id> --template runbook|technical-plan|prd|learning-notes
+
+# Skill Forge
+ccmemo skill draft <session_id>
+ccmemo skill init <name> --from-session <id>
+ccmemo skill validate <path>
+ccmemo skill install <path>
+ccmemo skill uninstall <name>
+
+# 工具
+ccmemo demo                               # 导入示例会话（冷启动）
+ccmemo config get/set <key> <value>
+ccmemo doctor
+```
+
+### 5.5 API 端点
+
+```text
+GET    /api/projects
+GET    /api/sessions?query=&projectId=&status=&limit=&cursor=
+GET    /api/sessions/:id
+GET    /api/sessions/:id/timeline?cursor=<id>&limit=50&type=
+GET    /api/sessions/:id/resume-check
+POST   /api/sessions/:id/export
+POST   /api/sessions/:id/redaction-preview
+POST   /api/sessions/:id/summarize
+GET    /api/sessions/:id/summaries
+POST   /api/sessions/:id/skill-draft
+POST   /api/skills
+POST   /api/skills/:id/validate
+POST   /api/skills/:id/install
+GET    /api/search?q=<query>
+GET    /api/settings / PUT /api/settings
+GET    /api/events (SSE)
+```
+
+### 5.6 配置
+
+TOML 格式。优先级：CLI 参数 > 环境变量 `CCMEMO_*` > `.ccmemo.toml` > `config.toml` > 默认值。
+
+### 5.7 SQLite 并发
+
+WAL 模式。批量写入动态 batch（4MB/批，2000条上限）。扫描不阻塞 UI。
+
+冷启动扫描性能目标：
+
+| 规模 | 目标 |
+|---|---|
+| 100 sessions（< 50MB） | < 5s |
+| 500 sessions（< 500MB） | < 30s |
+| 2000 sessions（< 2GB） | < 3min |
+
+## 6. 安全与隐私
+
+### 6.1 安全基线
+
+- 默认本地优先，不联网，不上传
+- 本地 Web 只监听 `127.0.0.1`，端口随机化
+- 启动时生成一次性 bearer token
+
+### 6.2 本地 API 安全（⚠ 评审优化）
+
+- **Windows token 传递**：改用内存传递（环境变量或 stdin pipe），不依赖文件权限（NTFS 上 `chmod 600` 无效）
+- **Host 头严格校验**：只接受 `127.0.0.1:<实际端口>`
+- **自定义头要求**：所有请求必须携带 `X-CCMemo-Token`
+- **非认证请求统一返回 404**（避免响应差异探测）
+- CORS 只允许 `http://127.0.0.1:*`
+
+### 6.3 脱敏规则（⚠ 评审优化：首版 12 条）
+
+1. API key（`sk-`、`sk-ant-`、`key-`、`token` 前缀）
+2. AWS 凭证（`AKIA`、`ASIA` 前缀）**（新增）**
+3. GitHub token（`ghp_`、`gho_`、`ghu_`、`ghs_`、`ghc_`）
+4. JWT（`eyJ` 开头三段 base64）
+5. SSH private key
+6. 数据库连接串（`mongodb://`、`postgres://`、`mysql://`、`redis://`）
+7. Authorization header（`Bearer`、`Basic`）
+8. **硬编码密码检测**（变量名含 password/secret/token/passwd + 字符串值）**（新增）**
+9. 用户 home 路径
+10. 邮箱、手机号
+11. **私有 IP 地址**（10.x/172.16.x/192.168.x）**（新增）**
+12. **`.env` 文件块**（`KEY=VALUE` 模式中的敏感 key）**（新增）**
+
+误伤防护：`test`/`fake`/`dummy`/`example` 前缀值不触发；示例 key 模式不触发。
+
+**用户可自定义规则**（正则模式 + 替换格式）。
+
+### 6.4 威胁模型
+
+| 攻击者 | 风险 | 防护 |
+|---|---|---|
+| 本机恶意软件 | 读取 SQLite | 文件权限 600 + v0.4 SQLCipher |
+| 局域网攻击者 | 访问本地 API | 127.0.0.1 + 端口随机 + token + Host 校验 |
+| **Skill 供应链** | **恶意指令持久化** | **逐行审核 + injection 检测 + 安装隔离 + hash** |
+| 用户误操作 | 导出发到公开仓库 | 安全导出默认 + `_UNSAFE_` 标记 + 目录外导出 |
+| **恶意 transcript** | **parser 漏洞** | **单行长度硬上限 10MB + 安全 JSON 解析** |
+| Prompt injection | 诱导 AI 总结泄露 | transcript 作不可信输入 + injection 检测 |
+| 供应链风险 | 依赖库漏洞 | `cargo audit` CI 阻断 + `Cargo.lock` 锁定 |
+| Crash dump 泄露 | 内存中敏感数据 | 发布构建 `panic = "abort"` + `zeroize` crate |
+
+### 6.5 加密策略
+
+- 首版：不加密 SQLite，API key 从环境变量读取后 `std::env::remove_var` 清除
+- v0.4+：OS Keychain + SQLCipher
+
+## 7. 开发计划
+
+### 7.1 版本路线（⚠ 评审优化：工期修正）
+
+| 版本 | 目标 | 核心范围 | 工期 |
+|---|---|---|---|
+| v0.1 CLI + 极简 Web | 证明数据可信 + 有可视化 | scan/list/show(resume)/export + parser + SQLite + `ccmemo serve` 极简 Web + `ccmemo demo` | **5-6 周** |
+| v0.2 搜索与脱敏 | 补全核心能力 | FTS5 + jieba-rs + search + 12 条脱敏规则 | 4-5 周 |
+| v0.3 完整 Web UI + AI 总结 | 体验完善 + 复用价值 | 完整 UI + 空状态 + AI 总结（4 模板）+ Playbook | 5-6 周 |
+| v0.4 Skill Forge | 技能化 | Skill 提炼 + 校验 + 预置 5 个示例 Skill | 4-5 周 |
+| v0.5 Desktop | 跨平台体验 | Tauri + 安装包 + OS Keychain + SQLCipher | 4-5 周 |
+| v1.0 Stable | 稳定版 | parser 稳定 + migration + 性能 + 文档 | 4-5 周 |
+
+**总工期：26-32 周（约 7-8 人月）**
+
+### 7.2 v0.1 验收标准
+
+- 能扫描至少 3 个项目的会话
+- `ccmemo serve` 启动后可浏览会话列表和详情
+- 复制的恢复命令在 PowerShell 和 zsh 中均可用
+- 导出包含完整会话内容（含需求澄清讨论），manifest 完整
+- `ccmemo demo` 可导入示例会话
+- 1000 条消息索引 < 5s
+
+### 7.3 测试策略
+
+| 类型 | 范围 |
+|---|---|
+| Parser 测试 | user/assistant/tool_use/tool_result/system/compaction/半行JSON/损坏JSONL/超大文件 |
+| 路径测试 | Windows盘符/中文路径/空格路径/UNC/WSL映射/symlink/非ASCII路径（#40946） |
+| 功能测试 | 扫描/增量索引/搜索/详情/恢复命令/导出/脱敏/总结/Skill |
+| UI 测试 | Playwright + 截图回归 + 深色/浅色 + **空状态** + 错误状态 + 长文本 |
+| 性能测试 | 1000消息<5s / 10000消息<300ms搜索 / GB级流式导出 |
+| 安全测试 | API key脱敏/路径脱敏/硬编码密码检测/Skill审核流程/AI发送预览 |
+
+## 8. 冷启动策略（⚠ 评审新增）
+
+### 8.1 首次体验
+
+1. **`ccmemo demo`**：一键导入 3 个高质量示例会话（含完整 Bug 修复过程、需求讨论、技术调研），让用户立即看到 Playbook 和 Skill 的效果
+2. **首次扫描引导**：引导选择 Claude 配置目录，展示扫描进度和发现数量
+3. **会话 < 5 个时**：自动提示"导入示例会话体验全部功能"
+
+### 8.2 传播机制
+
+- **导出水印**：Markdown 末尾 `> Generated by [CCMemo](https://github.com/xxx/ccmemo)`
+- **预置 Skill 示例**：v0.4 附带 5 个高质量 Skill（`bug-fix-workflow`、`prd-from-session`、`project-init`、`code-review-checklist`、`migration-guide`）
+
+### 8.3 README 首屏
+
+```markdown
+# CCMemo
+
+Your Claude Code sessions contain gold — but they're trapped in JSONL files you never revisit.
+
+**CCMemo** turns AI coding sessions into searchable, reusable engineering memory.
+
+- 🔍 Search all your Claude Code sessions by project, branch, prompt, or file
+- 📋 Export complete session records including reasoning, decisions, and dead ends
+- 📝 Generate professional documents (PRDs, runbooks, technical plans) from sessions
+- ⚡ Forge successful sessions into reusable Agent Skills
+
+[Quick Start →](#quick-start)
+```
+
+## 9. 风险与验证
+
+### 9.1 Top 5 风险
+
+| 风险 | 等级 | 应对 |
+|---|---|---|
+| Claude Code transcript 格式变化 | 高 | 容错 parser + golden tests + `claude-code-transcripts` crate 社区维护 |
+| AI 总结不可信 | 高 | 原文引用 + 人工编辑 + 模板约束 + 质量自检 |
+| Skill 供应链攻击 | 高 | 逐行审核 + injection 检测 + 安装隔离 + hash 校验 |
+| Skill 生成质量不稳定 | 高 | Spec 先审阅 + 半自动辅助（非全自动）+ 预置示例 |
+| v0.1 工期超标 | 中 | 聚焦 scan/list/show/resume/export + serve，search 和脱敏移到 v0.2 |
+
+### 9.2 技术验证检查清单（v0.1 开工前）
+
+1. **验证 `claude-code-transcripts` crate**：API 是否满足需求？Entry 类型是否覆盖所有事件？
+2. **检查实际会话存储结构**：手动查看 `~/.claude/projects/` 的目录和文件格式
+3. **验证 jieba-rs 编译后 binary 体积**：如果 > 25MB 需换方案
+4. **验证 Windows 路径映射**：非 ASCII 路径的编码行为（参考 #40946）
+5. **访谈 5-10 个 Claude Code 高频用户**：验证核心痛点和需求强度

@@ -19,7 +19,7 @@ pub struct JsonlParser;
 
 impl JsonlParser {
     pub fn parse_file(path: &Path) -> Result<JsonlFileIterator<std::fs::File>> {
-        let file = std::fs::File::open(path).map_err(|e| AppError::Io(e))?;
+        let file = std::fs::File::open(path).map_err(AppError::Io)?;
         let reader = BufReader::with_capacity(256 * 1024, file);
         Ok(JsonlFileIterator {
             reader,
@@ -37,27 +37,30 @@ impl JsonlParser {
     }
 
     pub fn extract_session_id(entries: &[RawEntry]) -> Option<String> {
-        entries.iter().find_map(|e| e.json.get("sessionId").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        entries.iter().find_map(|e| {
+            e.json
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
     }
 
     pub fn extract_first_user_content(entries: &[RawEntry]) -> Option<String> {
         for e in entries {
-            if e.json.get("type").and_then(|v| v.as_str()) == Some("user") {
-                if let Some(content) = e.json.get("message").and_then(|m| m.get("content")) {
+            if e.json.get("type").and_then(|v| v.as_str()) == Some("user")
+                && let Some(content) = e.json.get("message").and_then(|m| m.get("content")) {
                     if let Some(s) = content.as_str() {
                         return Some(truncate_preview(s, 200));
                     }
                     if let Some(arr) = content.as_array() {
                         for block in arr {
-                            if block.get("type").and_then(|v| v.as_str()) == Some("text") {
-                                if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                            if block.get("type").and_then(|v| v.as_str()) == Some("text")
+                                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
                                     return Some(truncate_preview(text, 200));
                                 }
-                            }
                         }
                     }
                 }
-            }
         }
         None
     }
@@ -185,15 +188,16 @@ mod tests {
 
     #[test]
     fn extract_session_id_from_entries() {
-        let entries = vec![
-            RawEntry {
-                line_number: 1,
-                byte_offset: 0,
-                byte_length: 10,
-                json: serde_json::json!({"type": "user", "sessionId": "abc-123"}),
-            },
-        ];
-        assert_eq!(JsonlParser::extract_session_id(&entries), Some("abc-123".to_string()));
+        let entries = vec![RawEntry {
+            line_number: 1,
+            byte_offset: 0,
+            byte_length: 10,
+            json: serde_json::json!({"type": "user", "sessionId": "abc-123"}),
+        }];
+        assert_eq!(
+            JsonlParser::extract_session_id(&entries),
+            Some("abc-123".to_string())
+        );
     }
 
     #[test]

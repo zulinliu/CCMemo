@@ -3,7 +3,11 @@ use clap::{Parser, Subcommand};
 mod commands;
 
 #[derive(Parser)]
-#[command(name = "ccmemo", version, about = "CCMemo - Claude Code session memory manager")]
+#[command(
+    name = "ccmemo",
+    version,
+    about = "CCMemo - Claude Code session memory manager"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -94,14 +98,26 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Scan { full } => commands::run_scan(full),
-        Commands::List { query, project, status, limit, format } => {
-            commands::run_list(query.as_deref(), project.as_deref(), status.as_deref(), limit, &format)
-        }
+        Commands::List {
+            query,
+            project,
+            status,
+            limit,
+            format,
+        } => commands::run_list(
+            query.as_deref(),
+            project.as_deref(),
+            status.as_deref(),
+            limit,
+            &format,
+        ),
         Commands::Show { session_id } => commands::run_show(&session_id),
         Commands::Resume { session_id } => commands::run_resume(&session_id),
-        Commands::Export { session_id, format, safe } => {
-            commands::run_export(&session_id, &format, safe)
-        }
+        Commands::Export {
+            session_id,
+            format,
+            safe,
+        } => commands::run_export(&session_id, &format, safe),
         Commands::Serve { port } => commands::run_serve(port),
         Commands::Demo => commands::run_demo(),
         Commands::Config { action } => match action {

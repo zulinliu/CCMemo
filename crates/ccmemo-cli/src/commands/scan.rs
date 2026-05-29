@@ -15,7 +15,10 @@ pub fn run_scan(full: bool) -> Result<()> {
     let projects = discovery.discover_all()?;
 
     if projects.is_empty() {
-        println!("No projects found in {}", config.claude_config_dir.display());
+        println!(
+            "No projects found in {}",
+            config.claude_config_dir.display()
+        );
         return Ok(());
     }
 
@@ -29,11 +32,15 @@ pub fn run_scan(full: bool) -> Result<()> {
     let mut total_errors = 0usize;
 
     for project in &projects {
-        let project_name = project.real_path
+        let project_name = project
+            .real_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(&project.encoded_folder);
-        println!("  Scanning {project_name} ({} files)...", project.jsonl_files.len());
+        println!(
+            "  Scanning {project_name} ({} files)...",
+            project.jsonl_files.len()
+        );
 
         match indexer.index_project(project, full) {
             Ok(result) => {

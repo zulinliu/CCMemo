@@ -37,11 +37,22 @@ impl<'a> DemoService<'a> {
                   errorCount, tags, branch, filePath) \
                  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)",
                 rusqlite::params![
-                    session.session_id, session.project_id, session.auto_title,
-                    session.custom_title, session.status.to_string(), session.started_at,
-                    session.ended_at, session.total_input_tokens, session.total_output_tokens,
-                    session.model, session.file_count, session.tool_call_count,
-                    session.error_count, session.tags, session.branch, session.file_path
+                    session.session_id,
+                    session.project_id,
+                    session.auto_title,
+                    session.custom_title,
+                    session.status.to_string(),
+                    session.started_at,
+                    session.ended_at,
+                    session.total_input_tokens,
+                    session.total_output_tokens,
+                    session.model,
+                    session.file_count,
+                    session.tool_call_count,
+                    session.error_count,
+                    session.tags,
+                    session.branch,
+                    session.file_path
                 ],
             )?;
 
@@ -73,8 +84,8 @@ impl<'a> DemoService<'a> {
                 auto_title: "Fix auth token expiry bug".into(),
                 custom_title: None,
                 status: SessionStatus::Active,
-                started_at: (now.clone() - chrono::Duration::hours(2)).to_rfc3339(),
-                ended_at: Some((now.clone() - chrono::Duration::minutes(30)).to_rfc3339()),
+                started_at: (now - chrono::Duration::hours(2)).to_rfc3339(),
+                ended_at: Some((now - chrono::Duration::minutes(30)).to_rfc3339()),
                 total_input_tokens: 15000,
                 total_output_tokens: 25000,
                 model: Some("claude-sonnet-4-6".into()),
@@ -91,8 +102,11 @@ impl<'a> DemoService<'a> {
                 auto_title: "Discuss API design for payment module".into(),
                 custom_title: Some("Payment API Architecture".into()),
                 status: SessionStatus::Completed,
-                started_at: (now.clone() - chrono::Duration::days(2)).to_rfc3339(),
-                ended_at: Some((now.clone() - chrono::Duration::days(2) + chrono::Duration::hours(1)).to_rfc3339()),
+                started_at: (now - chrono::Duration::days(2)).to_rfc3339(),
+                ended_at: Some(
+                    (now - chrono::Duration::days(2) + chrono::Duration::hours(1))
+                        .to_rfc3339(),
+                ),
                 total_input_tokens: 20000,
                 total_output_tokens: 35000,
                 model: Some("claude-sonnet-4-6".into()),
@@ -109,8 +123,11 @@ impl<'a> DemoService<'a> {
                 auto_title: "Research Rust async frameworks comparison".into(),
                 custom_title: None,
                 status: SessionStatus::Completed,
-                started_at: (now.clone() - chrono::Duration::days(5)).to_rfc3339(),
-                ended_at: Some((now.clone() - chrono::Duration::days(5) + chrono::Duration::hours(3)).to_rfc3339()),
+                started_at: (now - chrono::Duration::days(5)).to_rfc3339(),
+                ended_at: Some(
+                    (now - chrono::Duration::days(5) + chrono::Duration::hours(3))
+                        .to_rfc3339(),
+                ),
                 total_input_tokens: 30000,
                 total_output_tokens: 50000,
                 model: Some("claude-opus-4-5".into()),
@@ -132,7 +149,7 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 1,
                 event_type: "user".into(),
-                timestamp: (now.clone() - chrono::Duration::hours(2)).to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2)).to_rfc3339(),
                 file_offset: 0,
                 byte_length: 256,
                 preview: Some("I have a bug where auth tokens expire unexpectedly...".into()),
@@ -143,7 +160,9 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 2,
                 event_type: "assistant".into(),
-                timestamp: (now.clone() - chrono::Duration::hours(2) + chrono::Duration::seconds(30)).to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2)
+                    + chrono::Duration::seconds(30))
+                .to_rfc3339(),
                 file_offset: 256,
                 byte_length: 512,
                 preview: Some("Let me investigate the token expiry logic...".into()),
@@ -154,7 +173,9 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 3,
                 event_type: "tool_use".into(),
-                timestamp: (now.clone() - chrono::Duration::hours(2) + chrono::Duration::minutes(1)).to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2)
+                    + chrono::Duration::minutes(1))
+                .to_rfc3339(),
                 file_offset: 768,
                 byte_length: 128,
                 preview: Some("Read file: src/auth/token.rs".into()),
@@ -165,7 +186,9 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 4,
                 event_type: "tool_result".into(),
-                timestamp: (now.clone() - chrono::Duration::hours(2) + chrono::Duration::minutes(2)).to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2)
+                    + chrono::Duration::minutes(2))
+                .to_rfc3339(),
                 file_offset: 896,
                 byte_length: 1024,
                 preview: Some("File content of token.rs with expiry logic...".into()),
@@ -176,7 +199,7 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 5,
                 event_type: "assistant".into(),
-                timestamp: (now.clone() - chrono::Duration::hours(1)).to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(1)).to_rfc3339(),
                 file_offset: 1920,
                 byte_length: 256,
                 preview: Some("I found the issue. The token expiry calculation...".into()),

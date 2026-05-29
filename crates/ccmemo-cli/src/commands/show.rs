@@ -8,16 +8,21 @@ pub fn run_show(session_id: &str) -> Result<()> {
     let config = Config::load()?;
     let db = Database::open(&config.db_path)?;
 
-    let session = db.get_session(session_id)?
+    let session = db
+        .get_session(session_id)?
         .ok_or_else(|| anyhow::anyhow!("Session '{}' not found", session_id))?;
 
     let event_count = db.get_event_count(&session.session_id)?;
 
     let term = console::Term::stdout();
 
-    let header = console::Style::new().bold().apply_to(format!(
-        "Session: {}", &session.session_id[..8.min(session.session_id.len())]
-    )).to_string();
+    let header = console::Style::new()
+        .bold()
+        .apply_to(format!(
+            "Session: {}",
+            &session.session_id[..8.min(session.session_id.len())]
+        ))
+        .to_string();
     term.write_line(&header)?;
     term.write_line(&format!("  Full ID:  {}", session.session_id))?;
     term.write_line(&format!("  Title:    {}", session.auto_title))?;
@@ -57,7 +62,10 @@ pub fn run_show(session_id: &str) -> Result<()> {
     // Show events
     let events_result = db.get_events(&session.session_id, None, 20)?;
     if !events_result.items.is_empty() {
-        let events_header = console::Style::new().bold().apply_to("Recent Events:").to_string();
+        let events_header = console::Style::new()
+            .bold()
+            .apply_to("Recent Events:")
+            .to_string();
         term.write_line(&events_header)?;
         for event in &events_result.items {
             let preview = event.preview.as_deref().unwrap_or("");

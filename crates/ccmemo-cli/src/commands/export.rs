@@ -10,7 +10,8 @@ pub fn run_export(session_id: &str, format: &str, _safe: bool) -> Result<()> {
     let config = Config::load()?;
     let db = Database::open(&config.db_path)?;
 
-    let session = db.get_session(session_id)?
+    let session = db
+        .get_session(session_id)?
         .ok_or_else(|| anyhow::anyhow!("Session '{}' not found", session_id))?;
 
     match format {
@@ -50,7 +51,10 @@ fn export_markdown(
     if let Some(ref branch) = session.branch {
         md.push_str(&format!("**Branch:** {branch}\n"));
     }
-    md.push_str(&format!("**Events:** {}\n", db.get_event_count(&session.session_id)?));
+    md.push_str(&format!(
+        "**Events:** {}\n",
+        db.get_event_count(&session.session_id)?
+    ));
     md.push_str("\n---\n\n");
 
     // Export events
@@ -67,14 +71,14 @@ fn export_markdown(
 
         match event.event_type.as_str() {
             "user" => {
-                md.push_str(&format!("## User\n\n"));
+                md.push_str("## User\n\n");
                 if let Some(ref preview) = event.preview {
                     md.push_str(preview);
                 }
                 md.push_str("\n\n");
             }
             "assistant" => {
-                md.push_str(&format!("## Assistant\n\n"));
+                md.push_str("## Assistant\n\n");
                 if let Some(ref preview) = event.preview {
                     md.push_str(preview);
                 }

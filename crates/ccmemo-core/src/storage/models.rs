@@ -1,4 +1,4 @@
-use crate::domain::types::{ProjectIdentity, SessionMetadata, TranscriptEvent, ToolCall};
+use crate::domain::types::{ProjectIdentity, SessionMetadata, ToolCall, TranscriptEvent};
 
 use crate::domain::error::Result;
 
@@ -70,16 +70,10 @@ pub fn insert_fts_entry(
     file_path: &str,
     tool_names: &str,
 ) -> Result<()> {
-    let sql = format!(
+    conn.execute(
         "INSERT INTO session_fts (sessionId, autoTitle, content_en, content_zh, filePath, toolNames) \
-         VALUES ('{}', '{}', '{}', '{}', '{}', '{}')",
-        session_id.replace('\'', "''"),
-        auto_title.replace('\'', "''"),
-        content_en.replace('\'', "''"),
-        content_zh.replace('\'', "''"),
-        file_path.replace('\'', "''"),
-        tool_names.replace('\'', "''"),
-    );
-    conn.execute_batch(&sql)?;
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![session_id, auto_title, content_en, content_zh, file_path, tool_names],
+    )?;
     Ok(())
 }

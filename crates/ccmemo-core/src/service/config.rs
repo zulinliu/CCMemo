@@ -11,7 +11,8 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let home = dirs::home_dir().ok_or_else(|| AppError::Config("Cannot find home directory".into()))?;
+        let home = dirs::home_dir()
+            .ok_or_else(|| AppError::Config("Cannot find home directory".into()))?;
 
         let claude_config_dir = std::env::var("CCMEMO_CLAUDE_CONFIG_DIR")
             .map(PathBuf::from)
@@ -20,7 +21,8 @@ impl Config {
         let db_path = std::env::var("CCMEMO_DB_PATH")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
-                let xdg = dirs::data_local_dir().unwrap_or_else(|| home.join(".local").join("share"));
+                let xdg =
+                    dirs::data_local_dir().unwrap_or_else(|| home.join(".local").join("share"));
                 xdg.join("ccmemo").join("ccmemo.db")
             });
 

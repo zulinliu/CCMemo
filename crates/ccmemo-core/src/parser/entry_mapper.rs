@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde_json::Value;
 
-use crate::domain::types::{SessionMetadata, SessionStatus, TranscriptEvent, ToolCall};
+use crate::domain::types::{SessionMetadata, SessionStatus, ToolCall, TranscriptEvent};
 use crate::parser::jsonl_parser::RawEntry;
 
 #[derive(Debug, Default)]
@@ -34,7 +34,10 @@ pub struct EntryMapper;
 impl EntryMapper {
     pub fn build_session(entries: &[RawEntry]) -> Option<SessionExtract> {
         let session_id = entries.iter().find_map(|e| {
-            e.json.get("sessionId").and_then(|v| v.as_str()).map(|s| s.to_string())
+            e.json
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
         })?;
 
         let mut extract = SessionExtract {
@@ -45,7 +48,11 @@ impl EntryMapper {
         let mut timestamps: Vec<&str> = Vec::new();
 
         for (idx, entry) in entries.iter().enumerate() {
-            let event_type = entry.json.get("type").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let event_type = entry
+                .json
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
 
             extract.event_types.insert(event_type.to_string());
 
@@ -54,23 +61,31 @@ impl EntryMapper {
             }
 
             if extract.git_branch.is_none() {
-                extract.git_branch = entry.json.get("gitBranch").and_then(|v| v.as_str()).map(|s| s.to_string());
+                extract.git_branch = entry
+                    .json
+                    .get("gitBranch")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
             }
 
             if extract.cwd.is_none() {
-                extract.cwd = entry.json.get("cwd").and_then(|v| v.as_str()).map(|s| s.to_string());
+                extract.cwd = entry
+                    .json
+                    .get("cwd")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
             }
 
             match event_type {
                 "queue-operation" => {
-                    if let Some("enqueue") = entry.json.get("operation").and_then(|v| v.as_str()) {
-                        if extract.first_user_message.is_none() {
-                            extract.first_user_message = entry.json
+                    if let Some("enqueue") = entry.json.get("operation").and_then(|v| v.as_str())
+                        && extract.first_user_message.is_none() {
+                            extract.first_user_message = entry
+                                .json
                                 .get("content")
                                 .and_then(|v| v.as_str())
-                                .map(|s| truncate_str(s, 200).to_string());
+                                .map(|s| truncate_str(s, 200));
                         }
-                    }
                 }
                 "user" => {
                     if extract.first_user_message.is_none() {
@@ -83,8 +98,17 @@ impl EntryMapper {
                 _ => {}
             }
 
-            let event_id = entry.json.get("uuid").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let timestamp = entry.json.get("timestamp").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let event_id = entry
+                .json
+                .get("uuid")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+            let timestamp = entry
+                .json
+                .get("timestamp")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
 
             extract.events.push(IndexedEvent {
                 event: TranscriptEvent {
@@ -124,16 +148,30 @@ impl EntryMapper {
             SessionStatus::Active
         };
 
-        let auto_title = extract.first_user_message.clone().unwrap_or_else(|| "Untitled session".to_string());
+        let auto_title = extract
+            .first_user_message
+            .clone()
+            .unwrap_or_else(|| "Untitled session".to_string());
 
         let file_count = extract.file_paths.len() as i64;
         let tool_call_count = extract.tool_calls.len() as i64;
-        let error_count = extract.events.iter().filter(|e| e.event.event_type == "error").count() as i64;
+        let error_count = extract
+            .events
+            .iter()
+            .filter(|e| e.event.event_type == "error")
+            .count() as i64;
 
         let tags = if extract.tool_names.is_empty() {
             None
         } else {
-            Some(extract.tool_names.iter().cloned().collect::<Vec<_>>().join(","))
+            Some(
+                extract
+                    .tool_names
+                    .iter()
+                    .map(|s| s.as_str())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            )
         };
 
         SessionMetadata {
@@ -157,7 +195,10 @@ impl EntryMapper {
     }
 
     fn extract_assistant_info(json: &Value, extract: &mut SessionExtract) {
-        let model = json.get("message").and_then(|m| m.get("model")).and_then(|v| v.as_str());
+        let model = json
+            .get("message")
+            .and_then(|m| m.get("model"))
+            .and_then(|v| v.as_str());
         if model.is_some() && extract.model.is_none() {
             extract.model = model.map(|s| s.to_string());
         }
@@ -173,14 +214,17 @@ impl EntryMapper {
                         ) {
                             extract.tool_names.insert(name.to_string());
 
-                            let input_summary = block.get("input").and_then(|inp| {
+                            let input_summary = block.get("input").map(|inp| {
                                 let s = serde_json::to_string(inp).unwrap_or_default();
-                                Some(truncate_str(&s, 200).to_string())
+                                truncate_str(&s, 200)
                             });
 
-                            let file_path = block.get("input")
+                            let file_path = block
+                                .get("input")
                                 .and_then(|inp| {
-                                    inp.get("file_path").or(inp.get("filePath")).or(inp.get("path"))
+                                    inp.get("file_path")
+                                        .or(inp.get("filePath"))
+                                        .or(inp.get("path"))
                                 })
                                 .and_then(|v| v.as_str())
                                 .map(|s| s.to_string());
@@ -191,7 +235,11 @@ impl EntryMapper {
 
                             extract.tool_calls.push(ToolCall {
                                 id: id.to_string(),
-                                event_id: json.get("uuid").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                event_id: json
+                                    .get("uuid")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    .to_string(),
                                 session_id: extract.session_id.clone(),
                                 tool_name: name.to_string(),
                                 file_path,
@@ -201,23 +249,27 @@ impl EntryMapper {
                         }
                     }
                     Some("tool_result") => {
-                        if let Some(tool_use_id) = block.get("tool_use_id").and_then(|v| v.as_str()) {
-                            if let Some(tc) = extract.tool_calls.iter_mut().find(|tc| tc.id == tool_use_id) {
+                        if let Some(tool_use_id) = block.get("tool_use_id").and_then(|v| v.as_str())
+                            && let Some(tc) = extract
+                                .tool_calls
+                                .iter_mut()
+                                .find(|tc| tc.id == tool_use_id)
+                            {
                                 let output = block.get("content").and_then(|c| {
                                     if let Some(s) = c.as_str() {
-                                        Some(truncate_str(s, 200).to_string())
+                                        Some(truncate_str(s, 200))
                                     } else if let Some(arr) = c.as_array() {
-                                        let texts: Vec<&str> = arr.iter()
+                                        let texts: Vec<&str> = arr
+                                            .iter()
                                             .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
                                             .collect();
-                                        Some(truncate_str(&texts.join(""), 200).to_string())
+                                        Some(truncate_str(&texts.join(""), 200))
                                     } else {
                                         None
                                     }
                                 });
                                 tc.output_summary = output;
                             }
-                        }
                     }
                     _ => {}
                 }
@@ -227,24 +279,29 @@ impl EntryMapper {
 
     fn make_preview(event_type: &str, json: &Value) -> Option<String> {
         match event_type {
-            "queue-operation" => json.get("content").and_then(|v| v.as_str()).map(|s| truncate_str(s, 200).to_string()),
+            "queue-operation" => json
+                .get("content")
+                .and_then(|v| v.as_str())
+                .map(|s| truncate_str(s, 200)),
             "user" => extract_user_text(json),
             "assistant" => {
                 let content = json.get("message").and_then(|m| m.get("content"));
                 content.and_then(|c| {
                     if let Some(arr) = c.as_array() {
                         for block in arr {
-                            if block.get("type").and_then(|v| v.as_str()) == Some("text") {
-                                if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                    return Some(truncate_str(text, 200).to_string());
+                            if block.get("type").and_then(|v| v.as_str()) == Some("text")
+                                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                                    return Some(truncate_str(text, 200));
                                 }
-                            }
                         }
                     }
                     None
                 })
             }
-            "system" => json.get("subtype").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            "system" => json
+                .get("subtype")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             _ => None,
         }
     }
@@ -253,29 +310,25 @@ impl EntryMapper {
 fn extract_user_text(json: &Value) -> Option<String> {
     let content = json.get("message").and_then(|m| m.get("content"))?;
     if let Some(s) = content.as_str() {
-        return Some(truncate_str(s, 200).to_string());
+        return Some(truncate_str(s, 200));
     }
     if let Some(arr) = content.as_array() {
         for block in arr {
-            if block.get("type").and_then(|v| v.as_str()) == Some("text") {
-                if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                    return Some(truncate_str(text, 200).to_string());
+            if block.get("type").and_then(|v| v.as_str()) == Some("text")
+                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
+                    return Some(truncate_str(text, 200));
                 }
-            }
         }
     }
     None
 }
 
-fn truncate_str(s: &str, max_len: usize) -> &str {
-    if s.len() <= max_len {
-        s
+fn truncate_str(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        s.to_string()
     } else {
-        let mut end = max_len;
-        while !s.is_char_boundary(end) && end > 0 {
-            end -= 1;
-        }
-        &s[..end]
+        let truncated: String = s.chars().take(max_chars).collect();
+        format!("{truncated}...")
     }
 }
 
@@ -296,9 +349,15 @@ mod tests {
     #[test]
     fn extract_session_from_basic_entries() {
         let entries = vec![
-            make_entry(json!({"type": "queue-operation", "operation": "enqueue", "sessionId": "s1", "timestamp": "2026-01-01T00:00:00Z", "content": "Hello"})),
-            make_entry(json!({"type": "user", "sessionId": "s1", "timestamp": "2026-01-01T00:00:01Z", "message": {"role": "user", "content": "Hello"}})),
-            make_entry(json!({"type": "assistant", "sessionId": "s1", "timestamp": "2026-01-01T00:00:05Z", "message": {"role": "assistant", "model": "claude-sonnet-4-6", "content": [{"type": "text", "text": "Hi there!"}]}})),
+            make_entry(
+                json!({"type": "queue-operation", "operation": "enqueue", "sessionId": "s1", "timestamp": "2026-01-01T00:00:00Z", "content": "Hello"}),
+            ),
+            make_entry(
+                json!({"type": "user", "sessionId": "s1", "timestamp": "2026-01-01T00:00:01Z", "message": {"role": "user", "content": "Hello"}}),
+            ),
+            make_entry(
+                json!({"type": "assistant", "sessionId": "s1", "timestamp": "2026-01-01T00:00:05Z", "message": {"role": "assistant", "model": "claude-sonnet-4-6", "content": [{"type": "text", "text": "Hi there!"}]}}),
+            ),
         ];
 
         let result = EntryMapper::build_session(&entries).unwrap();
@@ -312,19 +371,22 @@ mod tests {
 
     #[test]
     fn extract_tool_calls() {
-        let entries = vec![
-            make_entry(json!({"type": "assistant", "sessionId": "s1", "uuid": "evt-1", "timestamp": "2026-01-01T00:00:00Z",
+        let entries = vec![make_entry(
+            json!({"type": "assistant", "sessionId": "s1", "uuid": "evt-1", "timestamp": "2026-01-01T00:00:00Z",
                 "message": {"role": "assistant", "content": [
                     {"type": "tool_use", "id": "call-1", "name": "Read", "input": {"file_path": "/src/main.rs"}},
                     {"type": "tool_result", "tool_use_id": "call-1", "content": "file contents here"}
                 ]}
-            })),
-        ];
+            }),
+        )];
 
         let result = EntryMapper::build_session(&entries).unwrap();
         assert_eq!(result.tool_calls.len(), 1);
         assert_eq!(result.tool_calls[0].tool_name, "Read");
-        assert_eq!(result.tool_calls[0].file_path, Some("/src/main.rs".to_string()));
+        assert_eq!(
+            result.tool_calls[0].file_path,
+            Some("/src/main.rs".to_string())
+        );
         assert!(result.tool_names.contains("Read"));
         assert!(result.file_paths.contains("/src/main.rs"));
     }

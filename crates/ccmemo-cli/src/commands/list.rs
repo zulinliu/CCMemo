@@ -39,13 +39,16 @@ pub fn run_list(
     }
 
     if result.items.is_empty() {
-        println!("No sessions found. Run 'ccmemo demo' to load sample data or 'ccmemo scan' to index real sessions.");
+        println!(
+            "No sessions found. Run 'ccmemo demo' to load sample data or 'ccmemo scan' to index real sessions."
+        );
         return Ok(());
     }
 
     // Build project name lookup
     let projects = db.get_all()?;
-    let project_names: std::collections::HashMap<String, &str> = projects.iter()
+    let project_names: std::collections::HashMap<String, &str> = projects
+        .iter()
         .map(|p| (p.id.clone(), p.name.as_str()))
         .collect();
 
@@ -64,7 +67,10 @@ pub fn run_list(
         let id = &session.session_id[..8.min(session.session_id.len())];
         let title = truncate(&session.auto_title, 40);
         let project_name = truncate(
-            project_names.get(&session.project_id).copied().unwrap_or(&session.project_id),
+            project_names
+                .get(&session.project_id)
+                .copied()
+                .unwrap_or(&session.project_id),
             16,
         );
 
@@ -93,9 +99,7 @@ pub fn run_list(
     }
 
     if result.has_more {
-        term.write_line(&format!(
-            "\n... more results available (use --limit to increase)"
-        ))?;
+        term.write_line("\n... more results available (use --limit to increase)")?;
     }
 
     Ok(())

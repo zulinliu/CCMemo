@@ -1,13 +1,13 @@
 use std::path::Path;
 
 use crate::domain::error::Result;
-use crate::domain::types::{ScanBookmark, SessionMetadata, TranscriptEvent, ToolCall};
+use crate::domain::types::{ScanBookmark, SessionMetadata, ToolCall, TranscriptEvent};
 use crate::parser::entry_mapper::EntryMapper;
 use crate::parser::jsonl_parser::JsonlParser;
 use crate::service::project_discovery::DiscoveredProject;
+use crate::storage::models;
 use crate::storage::sqlite::Database;
 use crate::storage::{BookmarkRepository, EventRepository, ProjectRepository, SessionRepository};
-use crate::storage::models;
 use crate::tokenizer::jieba::tokenize_for_fts;
 
 use sha2::{Digest, Sha256};
@@ -39,10 +39,11 @@ impl<'a> SessionIndexer<'a> {
         };
 
         let existing = self.db.find_by_encoded_folder(&project.encoded_folder)?;
-        let project_identity = crate::service::project_discovery::ProjectDiscovery::to_project_identity(
-            project,
-            existing.as_ref(),
-        );
+        let project_identity =
+            crate::service::project_discovery::ProjectDiscovery::to_project_identity(
+                project,
+                existing.as_ref(),
+            );
         self.db.upsert(&project_identity)?;
 
         for jsonl_path in &project.jsonl_files {
@@ -68,27 +69,13 @@ impl<'a> SessionIndexer<'a> {
 
         // Compute file hash for change detection
         let file_hash = compute_file_hash(path)?;
-        let line_count = count_lines(path)?;
-
-        if !full {
-            if let Some(bookmark) = self.db.get_bookmark(&file_path_str)? {
-                if bookmark.file_hash.as_deref() == Some(&file_hash)
-                    && bookmark.last_indexed_line == line_count
-                {
-                    tracing::debug!("Skipping unchanged file: {file_path_str}");
-                    return Ok(FileScanResult::default());
-                }
-            }
-        }
 
         let entries: Vec<_> = JsonlParser::parse_file(path)?
-            .filter_map(|r| {
-                match r {
-                    Ok(entry) => Some(entry),
-                    Err(e) => {
-                        tracing::warn!("Parse error in {file_path_str}: {e}");
-                        None
-                    }
+            .filter_map(|r| match r {
+                Ok(entry) => Some(entry),
+                Err(e) => {
+                    tracing::warn!("Parse error in {file_path_str}: {e}");
+                    None
                 }
             })
             .collect();
@@ -96,6 +83,17 @@ impl<'a> SessionIndexer<'a> {
         if entries.is_empty() {
             return Ok(FileScanResult::default());
         }
+
+        let line_count = entries.last().map(|e| e.line_number).unwrap_or(0);
+
+        if !full
+            && let Some(bookmark) = self.db.get_bookmark(&file_path_str)?
+                && bookmark.file_hash.as_deref() == Some(&file_hash)
+                    && bookmark.last_indexed_line == line_count
+                {
+                    tracing::debug!("Skipping unchanged file: {file_path_str}");
+                    return Ok(FileScanResult::default());
+                }
 
         let session_id = match JsonlParser::extract_session_id(&entries) {
             Some(id) => id,
@@ -110,12 +108,14 @@ impl<'a> SessionIndexer<'a> {
             None => return Ok(FileScanResult::default()),
         };
 
-        let session_metadata = EntryMapper::to_session_metadata(&extract, project_id, &file_path_str);
+        let session_metadata =
+            EntryMapper::to_session_metadata(&extract, project_id, &file_path_str);
         let is_new = self.db.get_session(&session_id)?.is_none();
 
         self.db.upsert_session(&session_metadata)?;
 
-        let events: Vec<TranscriptEvent> = extract.events.iter().map(|ie| ie.event.clone()).collect();
+        let events: Vec<TranscriptEvent> =
+            extract.events.iter().map(|ie| ie.event.clone()).collect();
         let events_count = events.len();
         self.db.upsert_events(&events)?;
 
@@ -159,18 +159,23 @@ impl<'a> SessionIndexer<'a> {
         Ok(())
     }
 
-    fn update_fts(&self, session: &SessionMetadata, extract: &crate::parser::entry_mapper::SessionExtract) -> Result<()> {
+    fn update_fts(
+        &self,
+        session: &SessionMetadata,
+        extract: &crate::parser::entry_mapper::SessionExtract,
+    ) -> Result<()> {
         let conn = self.db.get_write_conn();
 
         // Delete old FTS entry for this session
-        let delete_sql = format!(
-            "DELETE FROM session_fts WHERE sessionId = '{}'",
-            session.session_id.replace('\'', "''"),
-        );
-        conn.execute_batch(&delete_sql)?;
+        conn.execute(
+            "DELETE FROM session_fts WHERE sessionId = ?1",
+            rusqlite::params![session.session_id],
+        )?;
 
         // Build content strings for FTS
-        let content_en = extract.events.iter()
+        let content_en = extract
+            .events
+            .iter()
             .filter_map(|ie| ie.event.preview.as_deref())
             .take(20)
             .collect::<Vec<_>>()
@@ -178,8 +183,18 @@ impl<'a> SessionIndexer<'a> {
 
         let content_zh = tokenize_for_fts(&content_en);
 
-        let file_paths = extract.file_paths.iter().cloned().collect::<Vec<_>>().join(" ");
-        let tool_names = extract.tool_names.iter().cloned().collect::<Vec<_>>().join(" ");
+        let file_paths = extract
+            .file_paths
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let tool_names = extract
+            .tool_names
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
 
         models::insert_fts_entry(
             &conn,
@@ -196,17 +211,11 @@ impl<'a> SessionIndexer<'a> {
 }
 
 fn compute_file_hash(path: &Path) -> Result<String> {
-    let data = std::fs::read(path)?;
-    let mut hasher = Sha256::new();
-    hasher.update(&data);
-    Ok(format!("{:x}", hasher.finalize()))
-}
-
-fn count_lines(path: &Path) -> Result<i64> {
-    use std::io::BufRead;
     let file = std::fs::File::open(path)?;
-    let reader = std::io::BufReader::new(file);
-    Ok(reader.lines().count() as i64)
+    let mut reader = std::io::BufReader::new(file);
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut reader, &mut hasher)?;
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 #[derive(Default)]

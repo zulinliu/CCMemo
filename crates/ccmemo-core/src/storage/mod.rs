@@ -3,7 +3,9 @@ pub mod models;
 pub mod sqlite;
 
 use crate::domain::error::Result;
-use crate::domain::types::{PaginatedResult, ProjectIdentity, ScanBookmark, SessionMetadata, SessionQuery, TranscriptEvent};
+use crate::domain::types::{
+    PaginatedResult, ProjectIdentity, ScanBookmark, SessionMetadata, SessionQuery, TranscriptEvent,
+};
 
 pub trait SessionRepository: Send + Sync {
     fn get_sessions(&self, query: &SessionQuery) -> Result<PaginatedResult<SessionMetadata>>;

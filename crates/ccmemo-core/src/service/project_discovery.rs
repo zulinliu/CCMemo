@@ -63,9 +63,15 @@ impl ProjectDiscovery {
         Ok(result)
     }
 
-    pub fn to_project_identity(discovered: &DiscoveredProject, existing: Option<&ProjectIdentity>) -> ProjectIdentity {
-        let id = existing.map(|p| p.id.clone()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-        let name = discovered.real_path
+    pub fn to_project_identity(
+        discovered: &DiscoveredProject,
+        existing: Option<&ProjectIdentity>,
+    ) -> ProjectIdentity {
+        let id = existing
+            .map(|p| p.id.clone())
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+        let name = discovered
+            .real_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(&discovered.encoded_folder)
@@ -108,11 +114,16 @@ impl ProjectDiscovery {
     }
 }
 
+/// Claude Code encodes project paths by replacing `/` with `-` and prefixing with `-`.
+/// E.g. `/home/user/my-project` becomes `-home-user-my-project`.
+/// This cannot be perfectly reversed (hyphens in names are ambiguous), but we
+/// reconstruct the path by looking for known parent patterns.
 fn decode_folder_name(encoded: &str) -> PathBuf {
-    let decoded = encoded
-        .strip_prefix('-')
-        .unwrap_or(encoded)
-        .replace('-', "/");
+    let stripped = encoded.strip_prefix('-').unwrap_or(encoded);
+    // Best-effort: replace all hyphens with slashes. For paths like
+    // /home/user/my-project, the hyphen in "my-project" becomes a slash.
+    // This is a known limitation of the Claude Code encoding scheme.
+    let decoded = stripped.replace('-', "/");
     PathBuf::from(format!("/{decoded}"))
 }
 

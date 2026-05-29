@@ -17,9 +17,8 @@ pub struct Database {
 impl Database {
     pub fn open(path: &Path) -> Result<Self> {
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| {
-                AppError::Config(format!("Cannot create database directory: {e}"))
-            })?;
+            std::fs::create_dir_all(parent)
+                .map_err(|e| AppError::Config(format!("Cannot create database directory: {e}")))?;
         }
 
         let write_conn = rusqlite::Connection::open(path)?;
@@ -35,14 +34,13 @@ impl Database {
         migrations::run_migrations(&write_conn)?;
 
         let db_path = path.to_path_buf();
-        let manager = SqliteConnectionManager::file(db_path)
-            .with_init(|conn| {
-                conn.pragma_update_and_check(None, "journal_mode", "WAL", |_| Ok(()))?;
-                conn.pragma_update(None, "query_only", "ON")?;
-                conn.pragma_update(None, "cache_size", -64000)?;
-                conn.pragma_update(None, "busy_timeout", 5000)?;
-                Ok(())
-            });
+        let manager = SqliteConnectionManager::file(db_path).with_init(|conn| {
+            conn.pragma_update_and_check(None, "journal_mode", "WAL", |_| Ok(()))?;
+            conn.pragma_update(None, "query_only", "ON")?;
+            conn.pragma_update(None, "cache_size", -64000)?;
+            conn.pragma_update(None, "busy_timeout", 5000)?;
+            Ok(())
+        });
 
         let pool = Pool::builder().max_size(4).build(manager)?;
 
@@ -60,11 +58,11 @@ impl Database {
              PRAGMA temp_store=MEMORY;
              PRAGMA foreign_keys=ON;",
         )?;
-        let _: String = write_conn.query_row("PRAGMA journal_mode=WAL", [], |r| r.get(0))?;
 
         migrations::run_migrations(&write_conn)?;
 
-        let manager = SqliteConnectionManager::file(":memory:");
+        // Share the same in-memory database via cache=shared URI
+        let manager = SqliteConnectionManager::file("file::memory:?cache=shared");
         let pool = Pool::builder().max_size(2).build(manager)?;
 
         Ok(Self {
@@ -78,7 +76,10 @@ impl Database {
     }
 
     pub fn get_write_conn(&self) -> std::sync::MutexGuard<'_, rusqlite::Connection> {
-        self.write_conn.lock().unwrap()
+        self.write_conn.lock().unwrap_or_else(|e| {
+            tracing::warn!("Write lock poisoned, recovering: {e}");
+            e.into_inner()
+        })
     }
 }
 
@@ -123,7 +124,8 @@ impl SessionRepository for Database {
         sql.push_str(" ORDER BY startedAt DESC, sessionId DESC LIMIT ?");
         params.push(Box::new((limit + 1) as i64));
 
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            params.iter().map(|p| p.as_ref()).collect();
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map(param_refs.as_slice(), |row| {
             Ok(SessionMetadata {
@@ -146,19 +148,25 @@ impl SessionRepository for Database {
             })
         })?;
 
-        let mut items: Vec<SessionMetadata> = rows.filter_map(|r| r.ok()).collect();
+        let mut items: Vec<SessionMetadata> = rows.collect::<rusqlite::Result<Vec<_>>>()?;
         let has_more = items.len() > limit;
         if has_more {
             items.truncate(limit);
         }
 
         let next_cursor = if has_more {
-            items.last().map(|s| encode_cursor(&s.started_at, &s.session_id))
+            items
+                .last()
+                .map(|s| encode_cursor(&s.started_at, &s.session_id))
         } else {
             None
         };
 
-        Ok(PaginatedResult { items, next_cursor, has_more })
+        Ok(PaginatedResult {
+            items,
+            next_cursor,
+            has_more,
+        })
     }
 
     fn get_session(&self, id: &str) -> Result<Option<SessionMetadata>> {
@@ -221,7 +229,8 @@ impl SessionRepository for Database {
 
     fn count_sessions(&self) -> Result<i64> {
         let conn = self.get_read_conn()?;
-        let count: i64 = conn.query_row("SELECT COUNT(*) FROM SessionMetadata", [], |row| row.get(0))?;
+        let count: i64 =
+            conn.query_row("SELECT COUNT(*) FROM SessionMetadata", [], |row| row.get(0))?;
         Ok(count)
     }
 }
@@ -238,7 +247,8 @@ impl EventRepository for Database {
             "SELECT id, sessionId, sequence, type, timestamp, fileOffset, byteLength, preview, rawJsonHash \
              FROM TranscriptEvent WHERE sessionId = ?1",
         );
-        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(session_id.to_string())];
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> =
+            vec![Box::new(session_id.to_string())];
 
         if let Some(c) = cursor {
             sql.push_str(" AND sequence > ?");
@@ -248,7 +258,8 @@ impl EventRepository for Database {
         sql.push_str(" ORDER BY sequence ASC LIMIT ?");
         params.push(Box::new((limit + 1) as i64));
 
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            params.iter().map(|p| p.as_ref()).collect();
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map(param_refs.as_slice(), |row| {
             Ok(TranscriptEvent {
@@ -264,7 +275,7 @@ impl EventRepository for Database {
             })
         })?;
 
-        let mut items: Vec<TranscriptEvent> = rows.filter_map(|r| r.ok()).collect();
+        let mut items: Vec<TranscriptEvent> = rows.collect::<rusqlite::Result<Vec<_>>>()?;
         let has_more = items.len() > limit;
         if has_more {
             items.truncate(limit);
@@ -275,7 +286,11 @@ impl EventRepository for Database {
             None
         };
 
-        Ok(PaginatedResult { items, next_cursor, has_more })
+        Ok(PaginatedResult {
+            items,
+            next_cursor,
+            has_more,
+        })
     }
 
     fn upsert_events(&self, events: &[TranscriptEvent]) -> Result<()> {
@@ -327,7 +342,7 @@ impl ProjectRepository for Database {
                 last_active_at: row.get(6)?,
             })
         })?;
-        Ok(rows.filter_map(|r| r.ok()).collect())
+        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
     }
 
     fn upsert(&self, project: &ProjectIdentity) -> Result<()> {
@@ -415,7 +430,11 @@ fn encode_cursor(started_at: &str, session_id: &str) -> String {
 fn decode_cursor(cursor: &str) -> CursorData {
     let bytes: Vec<u8> = (0..cursor.len())
         .step_by(2)
-        .filter_map(|i| cursor.get(i..i + 2).and_then(|hex| u8::from_str_radix(hex, 16).ok()))
+        .filter_map(|i| {
+            cursor
+                .get(i..i + 2)
+                .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+        })
         .collect();
     let s = String::from_utf8_lossy(&bytes);
     let parts: Vec<&str> = s.splitn(2, '|').collect();

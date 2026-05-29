@@ -18,7 +18,9 @@ pub fn run_config_set(key: &str, value: &str) -> Result<()> {
     match key {
         "claude_config_dir" => {
             println!("Set CCCMEMO_CLAUDE_CONFIG_DIR={value}");
-            println!("To persist: export CCCMEMO_CLAUDE_CONFIG_DIR=\"{value}\" in your shell profile");
+            println!(
+                "To persist: export CCCMEMO_CLAUDE_CONFIG_DIR=\"{value}\" in your shell profile"
+            );
         }
         "db_path" | "database" => {
             println!("Set CCCMEMO_DB_PATH={value}");

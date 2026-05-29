@@ -95,7 +95,8 @@ pub fn run_migrations(conn: &rusqlite::Connection) -> crate::domain::error::Resu
          CREATE INDEX IF NOT EXISTS idx_toolcall_event ON ToolCall(eventId);
          CREATE INDEX IF NOT EXISTS idx_toolcall_filepath ON ToolCall(filePath);
          CREATE INDEX IF NOT EXISTS idx_session_status ON SessionMetadata(status);
-         CREATE INDEX IF NOT EXISTS idx_session_project ON SessionMetadata(projectId);",
+         CREATE INDEX IF NOT EXISTS idx_session_project ON SessionMetadata(projectId);
+         CREATE INDEX IF NOT EXISTS idx_session_cursor ON SessionMetadata(startedAt DESC, sessionId DESC);",
     )?;
 
     let fts_exists: bool = conn
@@ -104,7 +105,8 @@ pub fn run_migrations(conn: &rusqlite::Connection) -> crate::domain::error::Resu
             [],
             |row| row.get::<_, i64>(0),
         )
-        .unwrap_or(0) > 0;
+        .unwrap_or(0)
+        > 0;
 
     if !fts_exists {
         conn.execute_batch(

@@ -169,23 +169,29 @@
 |-------------|-------|--------|
 | SCAN-01 through SCAN-07 | Phase 1 | Pending |
 | STOR-01 through STOR-05 | Phase 1 | Pending |
-| CLIC-01 through CLIC-10 | Phase 2 | Pending |
-| APIE-01 through APIE-13 | Phase 3 | Pending |
-| SECR-01 through SECR-06 | Phase 3 | Pending |
-| BROW-01 through BROW-06 | Phase 4 | Pending |
-| SRCH-01 through SRCH-05 | Phase 4 | Pending |
-| UIUX-01 through UIUX-07 | Phase 4 | Pending |
-| EXPT-01 through EXPT-06 | Phase 5 | Pending |
-| REDN-01 through REDN-04 | Phase 5 | Pending |
-| AIAN-01 through AIAN-08 | Phase 6 | Pending |
-| RSUM-01 through RSUM-03 | Phase 6 | Pending |
-| SKIL-01 through SKIL-08 | Phase 6 | Pending |
+| CLIC-01 through CLIC-06 | Phase 1 | Pending |
+| CLIC-09, CLIC-10 | Phase 1 | Pending |
+| SECR-01 through SECR-06 | Phase 2 | Pending |
+| APIE-01 through APIE-13 | Phase 2 | Pending |
+| CLIC-07, CLIC-08 | Phase 2 | Pending |
+| BROW-01 through BROW-06 | Phase 3 | Pending |
+| SRCH-01 through SRCH-05 | Phase 3 | Pending |
+| RSUM-01 through RSUM-03 | Phase 3 | Pending |
+| UIUX-01 through UIUX-07 | Phase 3 | Pending |
+| EXPT-01 through EXPT-06 | Phase 4 | Pending |
+| REDN-01 through REDN-04 | Phase 4 | Pending |
+| AIAN-01 through AIAN-08 | Phase 4 | Pending |
+| SKIL-01 through SKIL-08 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 62 total
-- Mapped to phases: 62
-- Unmapped: 0 ✓
+- v1 requirements: 88 total
+- Mapped to phases: 88
+- Phase 1: 20 (SCAN 7 + STOR 5 + CLIC 8)
+- Phase 2: 21 (SECR 6 + APIE 13 + CLIC 2)
+- Phase 3: 21 (BROW 6 + SRCH 5 + RSUM 3 + UIUX 7)
+- Phase 4: 26 (EXPT 6 + REDN 4 + AIAN 8 + SKIL 8)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-29*
-*Last updated: 2026-05-29 after initial definition*
+*Last updated: 2026-05-29 after roadmap creation*

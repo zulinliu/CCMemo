@@ -33,6 +33,17 @@
   --color-timeline-file: #d4a27f;
   --color-timeline-command: #87867f;
   --color-timeline-error: #c6613f;
+
+  --color-accent-ghost: oklch(0.55 0.12 30 / 0.08);
+  --color-status-active-bg: oklch(0.47 0.07 110 / 0.12);
+  --color-status-completed-bg: oklch(0.40 0.01 80 / 0.12);
+  --color-status-interrupted-bg: oklch(0.55 0.10 340 / 0.12);
+  --color-status-unrecoverable-bg: oklch(0.55 0.12 30 / 0.12);
+  --color-timeline-user-bg: oklch(0.60 0.08 240 / 0.12);
+  --color-timeline-ai-bg: oklch(0.47 0.07 110 / 0.12);
+  --color-timeline-file-bg: oklch(0.72 0.06 60 / 0.12);
+  --color-timeline-command-bg: oklch(0.55 0.01 80 / 0.12);
+  --color-timeline-error-bg: oklch(0.55 0.12 30 / 0.12);
 }
 
 :root,
@@ -50,6 +61,10 @@
   --color-border-focus: var(--color-accent);
   --color-surface-hover: rgba(20, 20, 19, 0.05);
   --color-surface-active: rgba(20, 20, 19, 0.1);
+  --color-card-bg: #ffffff;
+  --color-card-border: rgba(20, 20, 19, 0.08);
+  --color-card-selected-bg: rgba(198, 97, 63, 0.08);
+  --color-card-selected-border: var(--color-accent);
   --shadow-sm: 0 2px 2px rgba(0,0,0,0.01), 0 4px 4px rgba(0,0,0,0.02), 0 16px 24px rgba(0,0,0,0.04);
   --shadow-lg: 0 4px 3px rgba(0,0,0,0.02), 0 10px 8px rgba(0,0,0,0.03), 0 34px 27px rgba(0,0,0,0.04), 0 63px 50px rgba(0,0,0,0.05);
 }
@@ -68,6 +83,10 @@
   --color-border-focus: var(--color-accent-hover);
   --color-surface-hover: rgba(250, 249, 245, 0.05);
   --color-surface-active: rgba(250, 249, 245, 0.1);
+  --color-card-bg: #252523;
+  --color-card-border: rgba(250, 249, 245, 0.1);
+  --color-card-selected-bg: rgba(217, 119, 87, 0.12);
+  --color-card-selected-border: var(--color-accent-hover);
   --shadow-sm: 0 2px 2px rgba(0,0,0,0.1), 0 4px 4px rgba(0,0,0,0.15), 0 16px 24px rgba(0,0,0,0.2);
   --shadow-lg: 0 4px 3px rgba(0,0,0,0.15), 0 34px 27px rgba(0,0,0,0.25), 0 63px 50px rgba(0,0,0,0.3);
 }
@@ -131,4 +150,9 @@ button:active {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
+}
+
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-border-focus);
 }

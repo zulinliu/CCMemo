@@ -50,9 +50,8 @@ export function SearchBar({ value, onChange, placeholder = '搜索会话...' }: 
 
   return (
     <div className="relative">
-      <Search size={15}
-        className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ color: 'var(--color-text-muted)' }} />
+      <Search size={16}
+        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-muted)]" />
       <input
         ref={inputRef}
         type="text"
@@ -61,26 +60,14 @@ export function SearchBar({ value, onChange, placeholder = '搜索会话...' }: 
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         placeholder={placeholder}
-        className="w-full h-9 pl-9 pr-8 text-sm rounded-lg outline-none transition-all duration-200"
-        style={{
-          background: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border-primary)',
-          color: 'var(--color-text-primary)',
-          fontFamily: 'var(--font-sans)',
-        }}
-        onFocus={e => {
-          e.currentTarget.style.borderColor = 'var(--color-border-focus)'
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(198, 97, 63, 0.1)'
-        }}
-        onBlur={e => {
-          e.currentTarget.style.borderColor = 'var(--color-border-primary)'
-          e.currentTarget.style.boxShadow = 'none'
-        }}
+        className="w-full h-11 pl-10 pr-9 text-sm rounded-lg outline-none transition-all duration-200
+          bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-primary)]
+          focus:border-[var(--color-border-focus)] focus-ring
+          md:h-9"
       />
       {localValue && (
         <button onClick={handleClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded active:opacity-60"
-          style={{ color: 'var(--color-text-muted)' }}>
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-md active:opacity-60 text-[var(--color-text-muted)]">
           <X size={14} />
         </button>
       )}

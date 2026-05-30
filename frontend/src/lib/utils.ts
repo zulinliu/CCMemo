@@ -50,6 +50,16 @@ export function statusColor(status: string): string {
   }
 }
 
+export function statusBgColor(status: string): string {
+  switch (status) {
+    case 'active': return 'var(--color-status-active-bg)'
+    case 'completed': return 'var(--color-status-completed-bg)'
+    case 'interrupted': return 'var(--color-status-interrupted-bg)'
+    case 'unrecoverable': return 'var(--color-status-unrecoverable-bg)'
+    default: return 'var(--color-surface-hover)'
+  }
+}
+
 export function eventTypeColor(type: string): string {
   switch (type) {
     case 'user': return 'var(--color-timeline-user)'
@@ -59,6 +69,18 @@ export function eventTypeColor(type: string): string {
     case 'system': return 'var(--color-timeline-command)'
     case 'error': return 'var(--color-timeline-error)'
     default: return 'var(--color-text-muted)'
+  }
+}
+
+export function eventTypeBg(type: string): string {
+  switch (type) {
+    case 'user': return 'var(--color-timeline-user-bg)'
+    case 'assistant': return 'var(--color-timeline-ai-bg)'
+    case 'tool_use':
+    case 'tool_result': return 'var(--color-timeline-file-bg)'
+    case 'system': return 'var(--color-timeline-command-bg)'
+    case 'error': return 'var(--color-timeline-error-bg)'
+    default: return 'var(--color-surface-hover)'
   }
 }
 

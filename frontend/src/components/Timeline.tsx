@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { TimelineEvent, Session } from '../lib/types'
 import { api } from '../lib/api'
-import { formatDate, eventTypeColor, eventTypeLabel, truncate } from '../lib/utils'
+import { formatDate, eventTypeColor, eventTypeBg, eventTypeLabel, truncate } from '../lib/utils'
 import { User, Bot, Terminal, AlertCircle, Zap } from 'lucide-react'
 
 interface TimelineProps {
@@ -51,12 +51,12 @@ export function Timeline({ session }: TimelineProps) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
-        <AlertCircle size={24} style={{ color: 'var(--color-accent)' }} className="mb-3" />
-        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">加载事件失败</p>
-        <p style={{ color: 'var(--color-text-muted)' }} className="text-xs text-center mb-3">{error}</p>
+        <AlertCircle size={24} className="mb-3 text-[var(--color-accent)]" />
+        <p className="text-sm mb-2 text-[var(--color-text-secondary)]">加载事件失败</p>
+        <p className="text-xs text-center mb-3 text-[var(--color-text-muted)]">{error}</p>
         <button onClick={() => loadEvents()}
-          className="text-xs px-3 py-1.5 rounded-lg active:opacity-60"
-          style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
+          className="text-xs px-3 py-1.5 rounded-lg active:opacity-60
+            bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
           重试
         </button>
       </div>
@@ -65,20 +65,19 @@ export function Timeline({ session }: TimelineProps) {
 
   return (
     <div ref={containerRef} className="h-full overflow-y-auto">
-      <div className="p-3 space-y-0.5">
+      <div className="p-4 space-y-1">
         {events.map(event => (
           <TimelineNode key={event.id} event={event} />
         ))}
         {loading && (
           <div className="flex justify-center py-4">
-            <div className="w-4 h-4 border-2 rounded-full animate-spin"
-              style={{ borderColor: 'var(--color-border-secondary)', borderTopColor: 'var(--color-accent)' }} />
+            <div className="w-4 h-4 border-2 rounded-full animate-spin
+              border-[var(--color-border-secondary)] border-t-[var(--color-accent)]" />
           </div>
         )}
         {hasMore && !loading && (
           <button onClick={() => loadEvents(cursor ?? undefined)}
-            className="w-full py-2 text-xs font-medium rounded-lg active:opacity-60"
-            style={{ color: 'var(--color-text-tertiary)' }}>
+            className="w-full py-2.5 text-xs font-medium rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]">
             加载更多事件...
           </button>
         )}
@@ -90,35 +89,35 @@ export function Timeline({ session }: TimelineProps) {
 function TimelineNode({ event }: { event: TimelineEvent }) {
   const [expanded, setExpanded] = useState(false)
   const color = eventTypeColor(event.event_type)
+  const bgColor = eventTypeBg(event.event_type)
   const icon = eventIcon(event.event_type)
 
   return (
     <button
       onClick={() => setExpanded(!expanded)}
-      className="w-full text-left p-2.5 rounded-lg flex gap-2.5 transition-colors duration-150"
-    >
+      className="w-full text-left p-3 rounded-lg flex gap-3 transition-colors duration-150
+        active:bg-[var(--color-surface-active)]">
       <div className="flex flex-col items-center pt-0.5">
-        <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-          style={{ background: `${color}18`, color }}>
+        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+          style={{ background: bgColor, color }}>
           {icon}
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-xs font-medium" style={{ color }}>
+          <span className="text-xs font-semibold" style={{ color }}>
             {eventTypeLabel(event.event_type)}
           </span>
-          <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          <span className="text-xs text-[var(--color-text-muted)]">
             #{event.sequence}
           </span>
         </div>
         {event.preview && (
-          <p className={`text-xs leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}
-            style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+          <p className={`text-xs leading-relaxed font-mono text-[var(--color-text-secondary)] ${expanded ? '' : 'line-clamp-2'}`}>
             {expanded ? event.preview : truncate(event.preview, 200)}
           </p>
         )}
-        <span className="text-xs mt-1 block" style={{ color: 'var(--color-text-muted)' }}>
+        <span className="text-xs mt-1 block text-[var(--color-text-muted)]">
           {formatDate(event.timestamp)}
         </span>
       </div>
@@ -127,7 +126,7 @@ function TimelineNode({ event }: { event: TimelineEvent }) {
 }
 
 function eventIcon(type: string) {
-  const size = 12
+  const size = 13
   switch (type) {
     case 'user': return <User size={size} />
     case 'assistant': return <Bot size={size} />

@@ -42,14 +42,12 @@ export function MobileLayout() {
   }
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden" style={{ background: 'var(--color-bg-primary)' }}>
+    <div className="flex flex-col h-dvh overflow-hidden bg-[var(--color-bg-primary)]">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 h-11 shrink-0"
-        style={{ borderBottom: '1px solid var(--color-border-primary)' }}>
-        <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>CCMemo</span>
+      <header className="flex items-center justify-between px-4 h-11 shrink-0 border-b border-[var(--color-border-primary)]">
+        <span className="text-sm font-semibold text-[var(--color-text-primary)]">CCMemo</span>
         <button onClick={toggle}
-          className="p-1.5 rounded-lg active:opacity-60"
-          style={{ color: 'var(--color-text-tertiary)' }}>
+          className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]">
           {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
         </button>
       </header>
@@ -58,30 +56,24 @@ export function MobileLayout() {
       <div className="flex-1 overflow-hidden pb-14">
         {tab === 'sessions' && (
           <div className="flex flex-col h-full">
-            <div className="px-3 pt-3 pb-2 space-y-2" style={{ borderBottom: '1px solid var(--color-border-primary)' }}>
+            <div className="px-4 pt-3 pb-3 space-y-2.5 border-b border-[var(--color-border-primary)]">
               <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话..." />
-              <div className="flex gap-1.5">
+              <div className="flex gap-2">
                 <select
                   value={projectFilter ?? ''}
                   onChange={e => setProjectFilter(e.target.value || undefined)}
-                  className="flex-1 h-8 px-2 text-xs rounded-md outline-none"
-                  style={{
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--color-border-primary)',
-                    color: 'var(--color-text-secondary)',
-                  }}>
+                  className="flex-1 min-w-0 h-10 px-3 text-xs rounded-lg outline-none
+                    bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-secondary)]
+                    focus:border-[var(--color-border-focus)] focus-ring">
                   <option value="">全部项目</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select
                   value={statusFilter ?? ''}
                   onChange={e => setStatusFilter(e.target.value || undefined)}
-                  className="w-20 h-8 px-2 text-xs rounded-md outline-none"
-                  style={{
-                    background: 'var(--color-bg-secondary)',
-                    border: '1px solid var(--color-border-primary)',
-                    color: 'var(--color-text-secondary)',
-                  }}>
+                  className="w-24 shrink-0 h-10 px-3 text-xs rounded-lg outline-none
+                    bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-secondary)]
+                    focus:border-[var(--color-border-focus)] focus-ring">
                   <option value="">状态</option>
                   <option value="active">进行中</option>
                   <option value="completed">已完成</option>
@@ -129,7 +121,7 @@ export function MobileLayout() {
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex items-center justify-center h-full px-6">
-      <p className="text-sm text-center" style={{ color: 'var(--color-text-muted)' }}>{message}</p>
+      <p className="text-sm text-center text-[var(--color-text-muted)]">{message}</p>
     </div>
   )
 }

@@ -81,8 +81,8 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
-        <p style={{ color: 'var(--color-accent)' }} className="text-sm mb-2">加载会话失败</p>
-        <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">{error}</p>
+        <p className="text-sm mb-2 text-[var(--color-accent)]">加载会话失败</p>
+        <p className="text-xs text-[var(--color-text-muted)]">{error}</p>
       </div>
     )
   }
@@ -90,13 +90,12 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
   if (sessions.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'var(--color-bg-tertiary)' }}>
-          <Clock size={24} style={{ color: 'var(--color-text-muted)' }} />
+        <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-[var(--color-bg-tertiary)]">
+          <Clock size={24} className="text-[var(--color-text-muted)]" />
         </div>
-        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm font-medium mb-1">暂无会话记录</p>
-        <p style={{ color: 'var(--color-text-muted)' }} className="text-xs text-center">
-          运行 <code className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>ccmemo scan</code> 扫描并索引 Claude Code 会话
+        <p className="text-sm font-medium mb-1 text-[var(--color-text-secondary)]">暂无会话记录</p>
+        <p className="text-xs text-center text-[var(--color-text-muted)]">
+          运行 <code className="font-mono px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)]">ccmemo scan</code> 扫描并索引 Claude Code 会话
         </p>
       </div>
     )
@@ -104,7 +103,7 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
 
   return (
     <div ref={containerRef} onScroll={handleScroll} className="h-full overflow-y-auto">
-      <div className="p-3 space-y-1.5">
+      <div className="p-4 space-y-2">
         {sessions.map(session => (
           <SessionCard
             key={session.session_id}
@@ -115,14 +114,12 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
         ))}
         {loading && (
           <div className="flex justify-center py-4">
-            <div className="w-5 h-5 border-2 rounded-full animate-spin"
-              style={{ borderColor: 'var(--color-border-secondary)', borderTopColor: 'var(--color-accent)' }} />
+            <div className="w-5 h-5 border-2 rounded-full animate-spin border-[var(--color-border-secondary)] border-t-[var(--color-accent)]" />
           </div>
         )}
         {hasMore && !loading && (
           <button onClick={loadMore}
-            className="w-full py-2 text-xs font-medium rounded-lg transition-colors duration-200 active:opacity-60"
-            style={{ color: 'var(--color-text-tertiary)' }}>
+            className="w-full py-2.5 text-xs font-medium rounded-lg transition-colors duration-200 active:opacity-60 text-[var(--color-text-tertiary)]">
             加载更多...
           </button>
         )}
@@ -141,20 +138,19 @@ function SessionCard({ session, selected, onClick }: {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-3 rounded-xl transition-all duration-200"
-      style={{
-        background: selected ? 'var(--color-surface-active)' : 'transparent',
-        border: selected ? '1px solid var(--color-border-focus)' : '1px solid transparent',
-      }}
+      className={`w-full text-left p-3 rounded-xl transition-all duration-200 min-h-[44px]
+        border ${selected
+          ? 'bg-[var(--color-card-selected-bg)] border-[var(--color-card-selected-border)]'
+          : 'bg-[var(--color-card-bg)] border-[var(--color-card-border)] hover:bg-[var(--color-surface-hover)] active:bg-[var(--color-surface-active)]'
+        }`}
     >
-      <p className="text-sm font-medium leading-snug line-clamp-2 mb-1.5"
-        style={{ color: 'var(--color-text-primary)' }}>
+      <p className="text-sm font-medium leading-snug line-clamp-2 mb-1.5 text-[var(--color-text-primary)]">
         {title}
       </p>
 
-      <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: 'var(--color-text-tertiary)' }}>
+      <div className="flex items-center gap-1.5 text-xs flex-wrap text-[var(--color-text-tertiary)]">
         <span className="flex items-center gap-1 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
+          <span className="w-2 h-2 rounded-full" style={{ background: statusColor(session.status) }} />
           <span>{statusLabel[session.status] || session.status}</span>
         </span>
         <span className="shrink-0">{formatRelativeTime(session.started_at)}</span>
@@ -171,7 +167,7 @@ function SessionCard({ session, selected, onClick }: {
           </span>
         )}
         {session.error_count > 0 && (
-          <span className="flex items-center gap-0.5 shrink-0" style={{ color: 'var(--color-accent)' }}>
+          <span className="flex items-center gap-0.5 shrink-0 text-[var(--color-accent)]">
             <AlertTriangle size={10} />
             {session.error_count}
           </span>

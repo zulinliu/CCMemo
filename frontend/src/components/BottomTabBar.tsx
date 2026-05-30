@@ -16,12 +16,9 @@ const tabs: { key: MobileTab; label: string; icon: typeof Layers }[] = [
 
 export function BottomTabBar({ active, onChange, hasSession }: BottomTabBarProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-14 shrink-0"
-      style={{
-        background: 'var(--color-bg-primary)',
-        borderTop: '1px solid var(--color-border-primary)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center h-14 shrink-0
+      bg-[var(--color-bg-primary)] border-t border-[var(--color-border-primary)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {tabs.map(({ key, label, icon: Icon }) => {
         const isActive = active === key
         const disabled = !hasSession && key !== 'sessions'
@@ -29,14 +26,14 @@ export function BottomTabBar({ active, onChange, hasSession }: BottomTabBarProps
           <button
             key={key}
             onClick={() => !disabled && onChange(key)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-opacity duration-150"
-            style={{
-              color: isActive ? 'var(--color-accent)' : disabled ? 'var(--color-text-muted)' : 'var(--color-text-tertiary)',
-              opacity: disabled ? 0.4 : 1,
-            }}
-          >
+            className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full
+              transition-opacity duration-150 ${disabled ? 'opacity-40' : ''}`}
+            style={{ color: isActive ? 'var(--color-accent)' : disabled ? 'var(--color-text-muted)' : 'var(--color-text-tertiary)' }}>
             <Icon size={20} />
-            <span className="text-[10px] font-medium">{label}</span>
+            <span className={`text-[11px] ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
+            {isActive && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-full bg-[var(--color-accent)]" />
+            )}
           </button>
         )
       })}

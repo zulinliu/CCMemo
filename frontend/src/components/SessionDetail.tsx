@@ -1,6 +1,7 @@
 import type { Session } from '../lib/types'
-import { formatDate, statusColor, formatTokenCount } from '../lib/utils'
-import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor } from 'lucide-react'
+import { formatDate, statusColor, statusBgColor, formatTokenCount } from '../lib/utils'
+import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor, Copy, Check } from 'lucide-react'
+import { useState } from 'react'
 
 const statusLabel: Record<string, string> = {
   active: '进行中',
@@ -17,14 +18,13 @@ export function SessionDetail({ session }: SessionDetailProps) {
   return (
     <div className="p-4 space-y-4">
       <div>
-        <h2 className="text-base font-semibold leading-snug mb-2"
-          style={{ color: 'var(--color-text-primary)' }}>
+        <h2 className="text-base font-semibold leading-snug mb-2 text-[var(--color-text-primary)]">
           {session.auto_title}
         </h2>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
             style={{
-              background: `${statusColor(session.status)}15`,
+              background: statusBgColor(session.status),
               color: statusColor(session.status),
             }}>
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
@@ -40,11 +40,11 @@ export function SessionDetail({ session }: SessionDetailProps) {
         {session.model && <DetailRow icon={<Monitor size={13} />} label="模型" value={session.model} />}
       </div>
 
-      <div className="pt-3 space-y-2" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
-        <h4 className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
+      <div className="pt-3 space-y-2 border-t border-[var(--color-border-primary)]">
+        <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
           统计
         </h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <StatCard icon={<FileText size={13} />} label="文件" value={String(session.file_count)} />
           <StatCard icon={<Cpu size={13} />} label="工具调用" value={String(session.tool_call_count)} />
           <StatCard icon={<AlertTriangle size={13} />} label="错误" value={String(session.error_count)}
@@ -54,19 +54,7 @@ export function SessionDetail({ session }: SessionDetailProps) {
         </div>
       </div>
 
-      <div className="pt-3" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
-        <h4 className="text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
-          会话 ID
-        </h4>
-        <code className="text-xs px-2 py-1 rounded-md block break-all"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            background: 'var(--color-bg-tertiary)',
-            color: 'var(--color-text-secondary)',
-          }}>
-          {session.session_id}
-        </code>
-      </div>
+      <SessionIdBlock id={session.session_id} />
     </div>
   )
 }
@@ -79,13 +67,9 @@ function DetailRow({ icon, label, value, mono }: {
 }) {
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span style={{ color: 'var(--color-text-muted)' }}>{icon}</span>
-      <span style={{ color: 'var(--color-text-muted)' }} className="w-14">{label}</span>
-      <span className={mono ? 'font-mono' : ''}
-        style={{
-          color: 'var(--color-text-primary)',
-          ...(mono ? { fontFamily: 'var(--font-mono)' } : {}),
-        }}>
+      <span className="text-[var(--color-text-muted)]">{icon}</span>
+      <span className="w-16 text-[var(--color-text-muted)]">{label}</span>
+      <span className={mono ? 'font-mono text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}>
         {value}
       </span>
     </div>
@@ -99,18 +83,44 @@ function StatCard({ icon, label, value, accent }: {
   accent?: boolean
 }) {
   return (
-    <div className="p-2.5 rounded-lg" style={{ background: 'var(--color-bg-secondary)' }}>
+    <div className="p-2.5 rounded-lg bg-[var(--color-bg-secondary)]">
       <div className="flex items-center gap-1.5 mb-0.5">
-        <span style={{ color: accent ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>{icon}</span>
-        <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+        <span className={accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}>{icon}</span>
+        <span className="text-xs text-[var(--color-text-muted)]">{label}</span>
       </div>
-      <span className="text-sm font-semibold font-mono"
-        style={{
-          color: accent ? 'var(--color-accent)' : 'var(--color-text-primary)',
-          fontFamily: 'var(--font-mono)',
-        }}>
+      <span className={`text-sm font-semibold font-mono ${accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'}`}>
         {value}
       </span>
+    </div>
+  )
+}
+
+function SessionIdBlock({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+
+  return (
+    <div className="pt-3 border-t border-[var(--color-border-primary)]">
+      <div className="flex items-center justify-between mb-1.5">
+        <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+          会话 ID
+        </h4>
+        <button onClick={handleCopy}
+          className="p-1 rounded active:opacity-60 text-[var(--color-text-muted)]"
+          title="复制">
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </button>
+      </div>
+      <code className="text-xs px-2.5 py-1.5 rounded-md block break-all font-mono
+        bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
+        {id}
+      </code>
     </div>
   )
 }

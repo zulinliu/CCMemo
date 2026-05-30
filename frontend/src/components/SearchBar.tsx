@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
 import { Search, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 
 interface SearchBarProps {
   value: string
@@ -7,7 +7,7 @@ interface SearchBarProps {
   placeholder?: string
 }
 
-export function SearchBar({ value, onChange, placeholder = 'Search sessions...' }: SearchBarProps) {
+export function SearchBar({ value, onChange, placeholder = '搜索会话...' }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -79,7 +79,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search sessions...' 
       />
       {localValue && (
         <button onClick={handleClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-[var(--color-surface-hover)]"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded active:opacity-60"
           style={{ color: 'var(--color-text-muted)' }}>
           <X size={14} />
         </button>

@@ -2,13 +2,20 @@ import type { Session } from '../lib/types'
 import { formatDate, statusColor, formatTokenCount } from '../lib/utils'
 import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor } from 'lucide-react'
 
+const statusLabel: Record<string, string> = {
+  active: '进行中',
+  completed: '已完成',
+  interrupted: '已中断',
+  unrecoverable: '异常',
+}
+
 interface SessionDetailProps {
   session: Session
 }
 
 export function SessionDetail({ session }: SessionDetailProps) {
   return (
-    <div className="p-5 space-y-5">
+    <div className="p-4 space-y-4">
       <div>
         <h2 className="text-base font-semibold leading-snug mb-2"
           style={{ color: 'var(--color-text-primary)' }}>
@@ -21,35 +28,35 @@ export function SessionDetail({ session }: SessionDetailProps) {
               color: statusColor(session.status),
             }}>
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
-            <span className="capitalize">{session.status}</span>
+            <span>{statusLabel[session.status] || session.status}</span>
           </span>
         </div>
       </div>
 
       <div className="space-y-2.5">
-        <DetailRow icon={<Clock size={13} />} label="Started" value={formatDate(session.started_at)} />
-        {session.ended_at && <DetailRow icon={<Clock size={13} />} label="Ended" value={formatDate(session.ended_at)} />}
-        {session.branch && <DetailRow icon={<GitBranch size={13} />} label="Branch" value={session.branch} mono />}
-        {session.model && <DetailRow icon={<Monitor size={13} />} label="Model" value={session.model} />}
+        <DetailRow icon={<Clock size={13} />} label="开始" value={formatDate(session.started_at)} />
+        {session.ended_at && <DetailRow icon={<Clock size={13} />} label="结束" value={formatDate(session.ended_at)} />}
+        {session.branch && <DetailRow icon={<GitBranch size={13} />} label="分支" value={session.branch} mono />}
+        {session.model && <DetailRow icon={<Monitor size={13} />} label="模型" value={session.model} />}
       </div>
 
       <div className="pt-3 space-y-2" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
         <h4 className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>
-          Statistics
+          统计
         </h4>
         <div className="grid grid-cols-2 gap-2">
-          <StatCard icon={<FileText size={13} />} label="Files" value={String(session.file_count)} />
-          <StatCard icon={<Cpu size={13} />} label="Tool Calls" value={String(session.tool_call_count)} />
-          <StatCard icon={<AlertTriangle size={13} />} label="Errors" value={String(session.error_count)}
+          <StatCard icon={<FileText size={13} />} label="文件" value={String(session.file_count)} />
+          <StatCard icon={<Cpu size={13} />} label="工具调用" value={String(session.tool_call_count)} />
+          <StatCard icon={<AlertTriangle size={13} />} label="错误" value={String(session.error_count)}
             accent={session.error_count > 0} />
-          <StatCard icon={<Zap size={13} />} label="Tokens"
+          <StatCard icon={<Zap size={13} />} label="Token"
             value={formatTokenCount(session.total_input_tokens + session.total_output_tokens)} />
         </div>
       </div>
 
       <div className="pt-3" style={{ borderTop: '1px solid var(--color-border-primary)' }}>
         <h4 className="text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
-          Session ID
+          会话 ID
         </h4>
         <code className="text-xs px-2 py-1 rounded-md block break-all"
           style={{

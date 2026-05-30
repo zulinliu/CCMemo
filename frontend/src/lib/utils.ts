@@ -7,26 +7,31 @@ export function formatRelativeTime(iso: string): string {
   const diffDay = Math.floor(diffMs / 86400000)
   const diffWeek = Math.floor(diffDay / 7)
 
-  if (diffMin < 1) return 'just now'
-  if (diffHr < 1) return `${diffMin}m ago`
-  if (diffDay < 1) return `${diffHr}h ago`
-  if (diffWeek < 1) return `${diffDay}d ago`
-  return `${diffWeek}w ago`
+  if (diffMin < 1) return '刚刚'
+  if (diffHr < 1) return `${diffMin}分钟前`
+  if (diffDay < 1) return `${diffHr}小时前`
+  if (diffWeek < 1) return `${diffDay}天前`
+  return `${diffWeek}周前`
 }
 
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString('zh-CN', {
     year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
 export function truncate(s: string, max: number): string {
-  if (s.length <= max) return s
-  return s.slice(0, max - 3) + '...'
+  const cleaned = stripHtmlTags(s)
+  if (cleaned.length <= max) return cleaned
+  return cleaned.slice(0, max - 3) + '...'
+}
+
+export function stripHtmlTags(s: string): string {
+  return s.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
 }
 
 export function formatTokenCount(n: number): string {
@@ -59,11 +64,13 @@ export function eventTypeColor(type: string): string {
 
 export function eventTypeLabel(type: string): string {
   switch (type) {
-    case 'user': return 'User'
+    case 'user': return '用户'
     case 'assistant': return 'AI'
-    case 'system': return 'System'
-    case 'queue-operation': return 'Queue'
-    case 'error': return 'Error'
+    case 'tool_use': return '工具调用'
+    case 'tool_result': return '工具结果'
+    case 'system': return '系统'
+    case 'queue-operation': return '队列'
+    case 'error': return '错误'
     default: return type
   }
 }

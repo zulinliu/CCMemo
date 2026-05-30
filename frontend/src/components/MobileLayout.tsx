@@ -58,8 +58,8 @@ export function MobileLayout() {
       <div className="flex-1 overflow-hidden pb-14">
         {tab === 'sessions' && (
           <div className="flex flex-col h-full">
-            <div className="p-3 space-y-2" style={{ borderBottom: '1px solid var(--color-border-primary)' }}>
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <div className="px-3 pt-3 pb-2 space-y-2" style={{ borderBottom: '1px solid var(--color-border-primary)' }}>
+              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话..." />
               <div className="flex gap-1.5">
                 <select
                   value={projectFilter ?? ''}
@@ -70,22 +70,22 @@ export function MobileLayout() {
                     border: '1px solid var(--color-border-primary)',
                     color: 'var(--color-text-secondary)',
                   }}>
-                  <option value="">All Projects</option>
+                  <option value="">全部项目</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
                 <select
                   value={statusFilter ?? ''}
                   onChange={e => setStatusFilter(e.target.value || undefined)}
-                  className="w-24 h-8 px-2 text-xs rounded-md outline-none"
+                  className="w-20 h-8 px-2 text-xs rounded-md outline-none"
                   style={{
                     background: 'var(--color-bg-secondary)',
                     border: '1px solid var(--color-border-primary)',
                     color: 'var(--color-text-secondary)',
                   }}>
-                  <option value="">Status</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="interrupted">Interrupted</option>
+                  <option value="">状态</option>
+                  <option value="active">进行中</option>
+                  <option value="completed">已完成</option>
+                  <option value="interrupted">已中断</option>
                 </select>
               </div>
             </div>
@@ -105,7 +105,7 @@ export function MobileLayout() {
           selectedSession ? (
             <Timeline session={selectedSession} />
           ) : (
-            <EmptyState message="Select a session to view its timeline" />
+            <EmptyState message="请先选择一个会话以查看时间线" />
           )
         )}
 
@@ -115,7 +115,7 @@ export function MobileLayout() {
               <SessionDetail session={selectedSession} />
             </div>
           ) : (
-            <EmptyState message="Select a session to view details" />
+            <EmptyState message="请先选择一个会话以查看详情" />
           )
         )}
       </div>

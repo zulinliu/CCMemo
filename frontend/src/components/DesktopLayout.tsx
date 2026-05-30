@@ -56,7 +56,7 @@ export function DesktopLayout() {
           {stats && (
             <span className="text-xs px-1.5 py-0.5 rounded-md"
               style={{ background: 'var(--color-bg-secondary)', color: 'var(--color-text-tertiary)' }}>
-              {stats.session_count} sessions
+              {stats.session_count} 个会话
             </span>
           )}
         </div>
@@ -66,7 +66,7 @@ export function DesktopLayout() {
             style={{ color: 'var(--color-text-tertiary)' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}>
+            title={`切换到${theme === 'light' ? '深色' : '浅色'}主题`}>
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
         </div>
@@ -90,7 +90,7 @@ export function DesktopLayout() {
                     border: '1px solid var(--color-border-primary)',
                     color: 'var(--color-text-secondary)',
                   }}>
-                  <option value="">All Projects</option>
+                  <option value="">全部项目</option>
                   {projects.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
@@ -104,10 +104,10 @@ export function DesktopLayout() {
                     border: '1px solid var(--color-border-primary)',
                     color: 'var(--color-text-secondary)',
                   }}>
-                  <option value="">Status</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="interrupted">Interrupted</option>
+                  <option value="">状态</option>
+                  <option value="active">进行中</option>
+                  <option value="completed">已完成</option>
+                  <option value="interrupted">已中断</option>
                 </select>
               </div>
             </div>
@@ -134,7 +134,7 @@ export function DesktopLayout() {
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            {sidebarCollapsed ? <Layers size={16} /> : 'Collapse'}
+            {sidebarCollapsed ? <Layers size={16} /> : '收起'}
           </button>
         </div>
 
@@ -146,10 +146,10 @@ export function DesktopLayout() {
                 style={{ borderBottom: '1px solid var(--color-border-primary)' }}>
                 <h3 className="text-xs font-medium uppercase tracking-wider"
                   style={{ color: 'var(--color-text-muted)' }}>
-                  Timeline
+                  时间线
                 </h3>
                 <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  Events
+                  事件
                 </span>
               </div>
               <Timeline session={selectedSession} />
@@ -166,10 +166,10 @@ export function DesktopLayout() {
                 <Activity size={28} style={{ color: 'var(--color-text-muted)' }} />
               </div>
               <h2 className="text-lg font-semibold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>
-                Select a session
+                选择一个会话
               </h2>
               <p className="text-sm max-w-xs mx-auto" style={{ color: 'var(--color-text-muted)' }}>
-                Choose a session from the sidebar to inspect its timeline events and details
+                从侧边栏选择一个会话以查看其时间线事件和详情
               </p>
             </div>
           </div>

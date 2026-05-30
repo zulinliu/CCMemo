@@ -33,7 +33,7 @@ export function Timeline({ session }: TimelineProps) {
       setHasMore(result.has_more)
     } catch (e) {
       if (requestId !== requestIdRef.current) return
-      setError(e instanceof Error ? e.message : 'Failed to load events')
+      setError(e instanceof Error ? e.message : '加载事件失败')
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false)
@@ -52,12 +52,12 @@ export function Timeline({ session }: TimelineProps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
         <AlertCircle size={24} style={{ color: 'var(--color-accent)' }} className="mb-3" />
-        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">Failed to load events</p>
+        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">加载事件失败</p>
         <p style={{ color: 'var(--color-text-muted)' }} className="text-xs text-center mb-3">{error}</p>
         <button onClick={() => loadEvents()}
-          className="text-xs px-3 py-1.5 rounded-lg"
+          className="text-xs px-3 py-1.5 rounded-lg active:opacity-60"
           style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
-          Retry
+          重试
         </button>
       </div>
     )
@@ -77,9 +77,9 @@ export function Timeline({ session }: TimelineProps) {
         )}
         {hasMore && !loading && (
           <button onClick={() => loadEvents(cursor ?? undefined)}
-            className="w-full py-2 text-xs font-medium rounded-lg"
+            className="w-full py-2 text-xs font-medium rounded-lg active:opacity-60"
             style={{ color: 'var(--color-text-tertiary)' }}>
-            Load more events...
+            加载更多事件...
           </button>
         )}
       </div>
@@ -95,9 +95,7 @@ function TimelineNode({ event }: { event: TimelineEvent }) {
   return (
     <button
       onClick={() => setExpanded(!expanded)}
-      className="w-full text-left p-2.5 rounded-lg flex gap-2.5 transition-colors duration-150 group"
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      className="w-full text-left p-2.5 rounded-lg flex gap-2.5 transition-colors duration-150"
     >
       <div className="flex flex-col items-center pt-0.5">
         <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"

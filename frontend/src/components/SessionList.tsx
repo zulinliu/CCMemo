@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Session, PaginatedResult } from '../lib/types'
 import { api } from '../lib/api'
 import { formatRelativeTime, truncate, statusColor, formatTokenCount } from '../lib/utils'
-import { Clock, GitBranch, Cpu, AlertTriangle, ChevronRight } from 'lucide-react'
+import { Clock, GitBranch, Cpu, AlertTriangle } from 'lucide-react'
 
 interface SessionListProps {
   onSelect: (id: string) => void
@@ -10,6 +10,13 @@ interface SessionListProps {
   searchQuery?: string
   projectId?: string
   statusFilter?: string
+}
+
+const statusLabel: Record<string, string> = {
+  active: '进行中',
+  completed: '已完成',
+  interrupted: '已中断',
+  unrecoverable: '异常',
 }
 
 export function SessionList({ onSelect, selectedId, searchQuery, projectId, statusFilter }: SessionListProps) {
@@ -45,7 +52,7 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
       setCursor(result.next_cursor)
       setHasMore(result.has_more)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load sessions')
+      setError(e instanceof Error ? e.message : '加载会话失败')
     } finally {
       setLoading(false)
     }
@@ -74,7 +81,7 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
-        <p style={{ color: 'var(--color-accent)' }} className="text-sm mb-2">Failed to load sessions</p>
+        <p style={{ color: 'var(--color-accent)' }} className="text-sm mb-2">加载会话失败</p>
         <p style={{ color: 'var(--color-text-muted)' }} className="text-xs">{error}</p>
       </div>
     )
@@ -87,9 +94,9 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
           style={{ background: 'var(--color-bg-tertiary)' }}>
           <Clock size={24} style={{ color: 'var(--color-text-muted)' }} />
         </div>
-        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm font-medium mb-1">No sessions found</p>
+        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm font-medium mb-1">暂无会话记录</p>
         <p style={{ color: 'var(--color-text-muted)' }} className="text-xs text-center">
-          Run <code className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>ccmemo scan</code> to index your Claude Code sessions
+          运行 <code className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--color-bg-tertiary)' }}>ccmemo scan</code> 扫描并索引 Claude Code 会话
         </p>
       </div>
     )
@@ -114,11 +121,9 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
         )}
         {hasMore && !loading && (
           <button onClick={loadMore}
-            className="w-full py-2 text-xs font-medium rounded-lg transition-colors duration-200"
-            style={{ color: 'var(--color-text-tertiary)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-hover)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            Load more...
+            className="w-full py-2 text-xs font-medium rounded-lg transition-colors duration-200 active:opacity-60"
+            style={{ color: 'var(--color-text-tertiary)' }}>
+            加载更多...
           </button>
         )}
       </div>
@@ -131,66 +136,48 @@ function SessionCard({ session, selected, onClick }: {
   selected: boolean
   onClick: () => void
 }) {
+  const title = truncate(session.auto_title, 60)
+
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-3.5 rounded-xl transition-all duration-200 group"
+      className="w-full text-left p-3 rounded-xl transition-all duration-200"
       style={{
         background: selected ? 'var(--color-surface-active)' : 'transparent',
         border: selected ? '1px solid var(--color-border-focus)' : '1px solid transparent',
       }}
-      onMouseEnter={e => {
-        if (!selected) {
-          e.currentTarget.style.background = 'var(--color-surface-hover)'
-          e.currentTarget.style.borderColor = 'var(--color-border-primary)'
-        }
-      }}
-      onMouseLeave={e => {
-        if (!selected) {
-          e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.borderColor = 'transparent'
-        }
-      }}
     >
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <h3 className="text-sm font-medium leading-snug flex-1 line-clamp-2"
-          style={{ color: 'var(--color-text-primary)' }}>
-          {truncate(session.auto_title, 80)}
-        </h3>
-        <ChevronRight size={14}
-          className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-          style={{ color: 'var(--color-text-muted)' }} />
-      </div>
+      <p className="text-sm font-medium leading-snug line-clamp-2 mb-1.5"
+        style={{ color: 'var(--color-text-primary)' }}>
+        {title}
+      </p>
 
-      <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-        <span className="flex items-center gap-1">
+      <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: 'var(--color-text-tertiary)' }}>
+        <span className="flex items-center gap-1 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
-          <span className="capitalize">{session.status}</span>
+          <span>{statusLabel[session.status] || session.status}</span>
         </span>
-        <span>{formatRelativeTime(session.started_at)}</span>
+        <span className="shrink-0">{formatRelativeTime(session.started_at)}</span>
         {session.branch && (
-          <span className="flex items-center gap-0.5">
-            <GitBranch size={10} />
-            {truncate(session.branch, 16)}
+          <span className="flex items-center gap-0.5 truncate max-w-[120px]">
+            <GitBranch size={10} className="shrink-0" />
+            <span className="truncate">{session.branch}</span>
           </span>
         )}
-      </div>
-
-      <div className="flex items-center gap-2.5 mt-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
         {session.tool_call_count > 0 && (
-          <span className="flex items-center gap-0.5">
+          <span className="flex items-center gap-0.5 shrink-0">
             <Cpu size={10} />
             {session.tool_call_count}
           </span>
         )}
         {session.error_count > 0 && (
-          <span className="flex items-center gap-0.5" style={{ color: 'var(--color-accent)' }}>
+          <span className="flex items-center gap-0.5 shrink-0" style={{ color: 'var(--color-accent)' }}>
             <AlertTriangle size={10} />
             {session.error_count}
           </span>
         )}
         {(session.total_input_tokens + session.total_output_tokens) > 0 && (
-          <span className="font-mono">
+          <span className="font-mono shrink-0">
             {formatTokenCount(session.total_input_tokens + session.total_output_tokens)} tok
           </span>
         )}

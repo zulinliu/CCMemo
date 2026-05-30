@@ -9,9 +9,9 @@ interface BottomTabBarProps {
 }
 
 const tabs: { key: MobileTab; label: string; icon: typeof Layers }[] = [
-  { key: 'sessions', label: 'Sessions', icon: Layers },
-  { key: 'timeline', label: 'Timeline', icon: Clock },
-  { key: 'detail', label: 'Detail', icon: BarChart3 },
+  { key: 'sessions', label: '会话', icon: Layers },
+  { key: 'timeline', label: '时间线', icon: Clock },
+  { key: 'detail', label: '详情', icon: BarChart3 },
 ]
 
 export function BottomTabBar({ active, onChange, hasSession }: BottomTabBarProps) {

@@ -17,10 +17,7 @@ use super::handlers;
 
 pub fn create_app(state: Arc<ServerState>) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin([
-            "http://127.0.0.1".parse::<HeaderValue>().unwrap(),
-            "http://localhost".parse::<HeaderValue>().unwrap(),
-        ])
+        .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
@@ -47,15 +44,33 @@ pub fn create_app(state: Arc<ServerState>) -> Router {
         .with_state(state)
 }
 
+fn is_private_host(host: &str) -> bool {
+    if host == "127.0.0.1" || host == "localhost" || host == "0.0.0.0" {
+        return true;
+    }
+    if host.starts_with("192.168.") || host.starts_with("10.") {
+        return true;
+    }
+    // 172.16.0.0/12
+    if let Some(rest) = host.strip_prefix("172.")
+        && let Some(seg) = rest.split('.').next()
+        && let Ok(n) = seg.parse::<u8>()
+        && (16..=31).contains(&n)
+    {
+        return true;
+    }
+    if host == "172.30.1.63" {
+        return true;
+    }
+    false
+}
+
 async fn host_validation_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
     let valid = req
         .headers()
         .get("host")
         .and_then(|v| v.to_str().ok())
-        .map(|h| {
-            let host = h.split(':').next().unwrap_or(h);
-            host == "127.0.0.1" || host == "localhost"
-        })
+        .map(|h| is_private_host(h.split(':').next().unwrap_or(h)))
         .unwrap_or(true);
 
     if !valid {
@@ -83,7 +98,7 @@ async fn security_headers_middleware(req: Request, next: Next) -> Response {
     );
     headers.insert(
         axum::http::header::HeaderName::from_static("x-content-security-policy"),
-        HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"),
+        HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; manifest-src 'self'"),
     );
     resp
 }

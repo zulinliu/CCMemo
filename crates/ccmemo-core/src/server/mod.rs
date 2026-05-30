@@ -27,8 +27,8 @@ pub async fn start_server(config: &Config, port: Option<u16>) -> Result<()> {
 
     let app = app::create_app(state);
 
-    let bind_port = port.unwrap_or(0);
-    let addr = SocketAddr::from(([127, 0, 0, 1], bind_port));
+    let bind_addr = port.unwrap_or(0u16);
+    let addr = SocketAddr::from(([0, 0, 0, 0], bind_addr));
     let listener = TcpListener::bind(addr).await?;
     let actual_port = listener.local_addr()?.port();
 

@@ -66,16 +66,25 @@ fn is_private_host(host: &str) -> bool {
 }
 
 async fn host_validation_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
-    let valid = req
+    let host = req
         .headers()
         .get("host")
         .and_then(|v| v.to_str().ok())
-        .map(|h| is_private_host(h.split(':').next().unwrap_or(h)))
-        .unwrap_or(true);
+        .map(|h| h.split(':').next().unwrap_or(h).to_lowercase());
 
-    if !valid {
-        tracing::debug!("Rejected request with invalid Host header");
-        return Err(StatusCode::NOT_FOUND);
+    match host.as_deref() {
+        // Allow known private/local addresses
+        Some(h) if is_private_host(h) => {},
+        // Allow requests without Host header (local unix socket, etc.)
+        None => {},
+        // For non-private hosts (e.g. tunnel domains like test.liuzl.asia),
+        // block obvious localhost-spoofing via non-standard ports on public IPs
+        Some(h) if h.contains("localhost") || h.contains("127.0.0.1") => {
+            tracing::debug!("Rejected request with spoofed Host header: {h}");
+            return Err(StatusCode::NOT_FOUND);
+        }
+        // Allow all other public hostnames (tunnel domains, etc.)
+        Some(_) => {},
     }
 
     Ok(next.run(req).await)

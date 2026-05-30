@@ -13,6 +13,8 @@ use crate::domain::types::{SessionQuery, SessionStatus};
 use crate::storage::{EventRepository, ProjectRepository, SessionRepository};
 use super::ServerState;
 
+const MAX_LIMIT: usize = 200;
+
 #[derive(RustEmbed)]
 #[folder = "../../frontend/dist/"]
 struct FrontendAssets;
@@ -42,8 +44,10 @@ pub struct SearchQuery {
 pub async fn list_projects(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let projects = state.db.get_all()?;
-    let json = serde_json::to_value(&projects)
+    let result = tokio::task::spawn_blocking(move || state.db.get_all())
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??;
+    let json = serde_json::to_value(&result)
         .map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(json)))
 }
@@ -64,11 +68,14 @@ pub async fn list_sessions(
         project_id: params.project_id,
         status: session_status,
         query: params.query,
-        limit: params.limit.or(Some(20)),
+        limit: Some(params.limit.unwrap_or(20).min(MAX_LIMIT)),
         cursor: params.cursor,
     };
 
-    let result = state.db.get_sessions(&sq)?;
+    let result = tokio::task::spawn_blocking(move || state.db.get_sessions(&sq))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??;
+
     let json = serde_json::to_value(&result)
         .map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(json)))
@@ -78,8 +85,11 @@ pub async fn get_session(
     State(state): State<Arc<ServerState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let session = state.db.get_session(&id)?
-        .ok_or_else(|| AppError::NotFound(format!("Session '{}' not found", id)))?;
+    let result = tokio::task::spawn_blocking(move || state.db.get_session(&id))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??;
+
+    let session = result.ok_or_else(|| AppError::NotFound("Session not found".to_string()))?;
     let json = serde_json::to_value(&session)
         .map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(json)))
@@ -90,11 +100,21 @@ pub async fn get_timeline(
     Path(id): Path<String>,
     Query(params): Query<TimelineQuery>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let session = state.db.get_session(&id)?
-        .ok_or_else(|| AppError::NotFound(format!("Session '{}' not found", id)))?;
+    let limit = params.limit.unwrap_or(100).min(MAX_LIMIT);
+    let cursor = params.cursor;
+    let state1 = Arc::clone(&state);
 
-    let limit = params.limit.unwrap_or(100);
-    let events = state.db.get_events(&session.session_id, params.cursor.as_deref(), limit)?;
+    let session = tokio::task::spawn_blocking(move || state1.db.get_session(&id))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??
+        .ok_or_else(|| AppError::NotFound("Session not found".to_string()))?;
+
+    let sid = session.session_id.clone();
+    let events = tokio::task::spawn_blocking(move || {
+        state.db.get_events(&sid, cursor.as_deref(), limit)
+    }).await
+        .map_err(|e| AppError::Internal(e.to_string()))??;
+
     let json = serde_json::to_value(&events)
         .map_err(|e| AppError::Internal(e.to_string()))?;
     Ok(Json(ApiResponse::ok(json)))
@@ -104,30 +124,33 @@ pub async fn get_tool_calls(
     State(state): State<Arc<ServerState>>,
     Path(id): Path<String>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let session = state.db.get_session(&id)?
-        .ok_or_else(|| AppError::NotFound(format!("Session '{}' not found", id)))?;
+    let state1 = Arc::clone(&state);
+    let session = tokio::task::spawn_blocking(move || state1.db.get_session(&id))
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))??
+        .ok_or_else(|| AppError::NotFound("Session not found".to_string()))?;
 
-    let conn = state.db.get_read_conn()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    let mut stmt = conn.prepare(
-        "SELECT id, eventId, sessionId, toolName, filePath, inputSummary, outputSummary \
-         FROM ToolCall WHERE sessionId = ?1 ORDER BY id"
-    ).map_err(|e| AppError::Internal(e.to_string()))?;
-    let rows = stmt.query_map(rusqlite::params![session.session_id], |row| {
-        Ok(serde_json::json!({
-            "id": row.get::<_, String>(0)?,
-            "event_id": row.get::<_, String>(1)?,
-            "session_id": row.get::<_, String>(2)?,
-            "tool_name": row.get::<_, String>(3)?,
-            "file_path": row.get::<_, Option<String>>(4)?,
-            "input_summary": row.get::<_, Option<String>>(5)?,
-            "output_summary": row.get::<_, Option<String>>(6)?,
-        }))
-    }).map_err(|e| AppError::Internal(e.to_string()))?;
-
-    let tool_calls: Vec<serde_json::Value> = rows
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let sid = session.session_id.clone();
+    let tool_calls = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, AppError> {
+        let conn = state.db.get_read_conn()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let mut stmt = conn.prepare(
+            "SELECT id, eventId, sessionId, toolName, filePath, inputSummary, outputSummary \
+             FROM ToolCall WHERE sessionId = ?1 ORDER BY id"
+        ).map_err(|e| AppError::Internal(e.to_string()))?;
+        let rows = stmt.query_map(rusqlite::params![sid], |row| {
+            Ok(serde_json::json!({
+                "id": row.get::<_, String>(0)?,
+                "event_id": row.get::<_, String>(1)?,
+                "session_id": row.get::<_, String>(2)?,
+                "tool_name": row.get::<_, String>(3)?,
+                "file_path": row.get::<_, Option<String>>(4)?,
+                "input_summary": row.get::<_, Option<String>>(5)?,
+                "output_summary": row.get::<_, Option<String>>(6)?,
+            }))
+        }).map_err(|e| AppError::Internal(e.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|e| AppError::Internal(e.to_string()))
+    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
     Ok(Json(ApiResponse::ok(serde_json::json!({ "items": tool_calls }))))
 }
@@ -141,60 +164,60 @@ pub async fn search(
         return Ok(Json(ApiResponse::ok(serde_json::json!({"items": [], "has_more": false}))));
     }
 
-    let conn = state.db.get_read_conn()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-
-    let limit = params.limit.unwrap_or(20) as i64;
+    let limit = params.limit.unwrap_or(20).min(MAX_LIMIT) as i64;
     let fts_query = format!("{}*", q.replace('"', "\"\"\""));
 
-    let mut sql = String::from(
-        "SELECT s.sessionId, s.projectId, s.autoTitle, s.customTitle, s.status, \
-         s.startedAt, s.endedAt, s.model, s.branch, s.fileCount, s.toolCallCount, s.errorCount \
-         FROM SessionMetadata s \
-         JOIN session_fts f ON f.sessionId = s.sessionId \
-         WHERE session_fts MATCH ?1"
-    );
-    let mut param_box: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(fts_query)];
+    let state = Arc::clone(&state);
+    let project_id = params.project_id;
+    let items = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, AppError> {
+        let conn = state.db.get_read_conn()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    if let Some(ref pid) = params.project_id {
-        sql.push_str(" AND s.projectId = ?");
-        param_box.push(Box::new(pid.clone()));
-    }
+        let mut sql = String::from(
+            "SELECT s.sessionId, s.projectId, s.autoTitle, s.customTitle, s.status, \
+             s.startedAt, s.endedAt, s.model, s.branch, s.fileCount, s.toolCallCount, s.errorCount \
+             FROM SessionMetadata s \
+             JOIN session_fts f ON f.sessionId = s.sessionId \
+             WHERE session_fts MATCH ?1"
+        );
+        let mut param_box: Vec<Box<dyn rusqlite::types::ToSql>> = vec![Box::new(fts_query)];
 
-    sql.push_str(" ORDER BY s.startedAt DESC LIMIT ?");
-    param_box.push(Box::new(limit + 1));
+        if let Some(ref pid) = project_id {
+            sql.push_str(" AND s.projectId = ?");
+            param_box.push(Box::new(pid.clone()));
+        }
 
-    let param_refs: Vec<&dyn rusqlite::types::ToSql> =
-        param_box.iter().map(|p| p.as_ref()).collect();
-    let mut stmt = conn.prepare(&sql).map_err(|e| AppError::Internal(e.to_string()))?;
-    let rows = stmt.query_map(param_refs.as_slice(), |row| {
-        Ok(serde_json::json!({
-            "session_id": row.get::<_, String>(0)?,
-            "project_id": row.get::<_, String>(1)?,
-            "auto_title": row.get::<_, String>(2)?,
-            "custom_title": row.get::<_, Option<String>>(3)?,
-            "status": row.get::<_, String>(4)?,
-            "started_at": row.get::<_, String>(5)?,
-            "ended_at": row.get::<_, Option<String>>(6)?,
-            "model": row.get::<_, Option<String>>(7)?,
-            "branch": row.get::<_, Option<String>>(8)?,
-            "file_count": row.get::<_, i64>(9)?,
-            "tool_call_count": row.get::<_, i64>(10)?,
-            "error_count": row.get::<_, i64>(11)?,
-        }))
-    }).map_err(|e| AppError::Internal(e.to_string()))?;
+        sql.push_str(" ORDER BY s.startedAt DESC LIMIT ?");
+        param_box.push(Box::new(limit + 1));
 
-    let mut items: Vec<serde_json::Value> = rows
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            param_box.iter().map(|p| p.as_ref()).collect();
+        let mut stmt = conn.prepare(&sql).map_err(|e| AppError::Internal(e.to_string()))?;
+        let rows = stmt.query_map(param_refs.as_slice(), |row| {
+            Ok(serde_json::json!({
+                "session_id": row.get::<_, String>(0)?,
+                "project_id": row.get::<_, String>(1)?,
+                "auto_title": row.get::<_, String>(2)?,
+                "custom_title": row.get::<_, Option<String>>(3)?,
+                "status": row.get::<_, String>(4)?,
+                "started_at": row.get::<_, String>(5)?,
+                "ended_at": row.get::<_, Option<String>>(6)?,
+                "model": row.get::<_, Option<String>>(7)?,
+                "branch": row.get::<_, Option<String>>(8)?,
+                "file_count": row.get::<_, i64>(9)?,
+                "tool_call_count": row.get::<_, i64>(10)?,
+                "error_count": row.get::<_, i64>(11)?,
+            }))
+        }).map_err(|e| AppError::Internal(e.to_string()))?;
+
+        rows.collect::<Result<Vec<_>, _>>().map_err(|e| AppError::Internal(e.to_string()))
+    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
     let has_more = items.len() > limit as usize;
-    if has_more {
-        items.truncate(limit as usize);
-    }
+    let truncated: Vec<_> = if has_more { items.into_iter().take(limit as usize).collect() } else { items };
 
     Ok(Json(ApiResponse::ok(serde_json::json!({
-        "items": items,
+        "items": truncated,
         "has_more": has_more
     }))))
 }
@@ -202,54 +225,56 @@ pub async fn search(
 pub async fn get_stats(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let session_count = state.db.count_sessions()?;
-    let projects = state.db.get_all()?;
+    let stats = tokio::task::spawn_blocking(move || -> Result<serde_json::Value, AppError> {
+        let session_count = state.db.count_sessions()?;
+        let projects = state.db.get_all()?;
 
-    let conn = state.db.get_read_conn()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-    let event_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM TranscriptEvent", [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+        let conn = state.db.get_read_conn()
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let event_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM TranscriptEvent", [],
+            |row| row.get(0)
+        ).map_err(|e| AppError::Internal(e.to_string()))?;
 
-    let tool_call_count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM ToolCall", [],
-        |row| row.get(0)
-    ).unwrap_or(0);
+        let tool_call_count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM ToolCall", [],
+            |row| row.get(0)
+        ).map_err(|e| AppError::Internal(e.to_string()))?;
 
-    Ok(Json(ApiResponse::ok(serde_json::json!({
-        "session_count": session_count,
-        "project_count": projects.len(),
-        "event_count": event_count,
-        "tool_call_count": tool_call_count,
-    }))))
+        Ok(serde_json::json!({
+            "session_count": session_count,
+            "project_count": projects.len(),
+            "event_count": event_count,
+            "tool_call_count": tool_call_count,
+        }))
+    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+
+    Ok(Json(ApiResponse::ok(stats)))
 }
 
-pub async fn serve_frontend(req: Request) -> impl IntoResponse {
+pub async fn serve_frontend(req: Request) -> Response<Body> {
     let path = req.uri().path().trim_start_matches('/');
 
-    // Try to serve the exact file first
     if !path.is_empty()
         && path != "index.html"
         && let Some(file) = FrontendAssets::get(path)
     {
         let mime = mime_guess::from_path(path).first_or_octet_stream();
-        return Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, mime.as_ref())
-            .header(header::CACHE_CONTROL, "public, max-age=31536000")
-            .body(Body::from(file.data.into_owned()))
-            .unwrap();
+        let mut resp = Response::new(Body::from(file.data.into_owned()));
+        if let Ok(val) = header::HeaderValue::from_str(mime.as_ref()) {
+            resp.headers_mut().insert(header::CONTENT_TYPE, val);
+        }
+        resp.headers_mut().insert(header::CACHE_CONTROL, header::HeaderValue::from_static("public, max-age=31536000"));
+        return resp;
     }
 
-    // SPA fallback: serve index.html for all other routes
     match FrontendAssets::get("index.html") {
-        Some(content) => Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-            .header(header::CACHE_CONTROL, "no-cache")
-            .body(Body::from(content.data.into_owned()))
-            .unwrap(),
+        Some(content) => {
+            let mut resp = Response::new(Body::from(content.data.into_owned()));
+            resp.headers_mut().insert(header::CONTENT_TYPE, header::HeaderValue::from_static("text/html; charset=utf-8"));
+            resp.headers_mut().insert(header::CACHE_CONTROL, header::HeaderValue::from_static("no-cache"));
+            resp
+        }
         None => Html(
             "<html><body style='font-family:system-ui;max-width:600px;margin:4rem auto;padding:0 1rem'>\
              <h1>CCMemo</h1>\

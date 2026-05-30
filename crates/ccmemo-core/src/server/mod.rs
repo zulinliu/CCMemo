@@ -16,7 +16,7 @@ pub struct ServerState {
     pub token: String,
 }
 
-pub async fn start_server(config: &Config, _port: Option<u16>) -> Result<()> {
+pub async fn start_server(config: &Config, port: Option<u16>) -> Result<()> {
     let db = Database::open(&config.db_path)?;
     let token = uuid::Uuid::new_v4().to_string();
 
@@ -27,16 +27,16 @@ pub async fn start_server(config: &Config, _port: Option<u16>) -> Result<()> {
 
     let app = app::create_app(state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 0));
+    let bind_port = port.unwrap_or(0);
+    let addr = SocketAddr::from(([127, 0, 0, 1], bind_port));
     let listener = TcpListener::bind(addr).await?;
     let actual_port = listener.local_addr()?.port();
 
     let url = format!("http://127.0.0.1:{actual_port}");
-    let token_display = &token[..8];
 
     println!("CCMemo server running at {url}");
-    println!("Auth token: {token}");
-    println!("Open: {url}?token={token_display}...");
+    eprintln!("CCMEMO_TOKEN={token}");
+    eprintln!("CCMEMO_URL={url}");
 
     axum::serve(listener, app).await?;
 

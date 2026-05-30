@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
+    http::HeaderValue,
     middleware,
     Router,
     routing::get,
@@ -13,7 +14,10 @@ use super::handlers;
 
 pub fn create_app(state: Arc<ServerState>) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin([
+            "http://127.0.0.1".parse::<HeaderValue>().unwrap(),
+            "http://localhost".parse::<HeaderValue>().unwrap(),
+        ])
         .allow_methods(Any)
         .allow_headers(Any);
 

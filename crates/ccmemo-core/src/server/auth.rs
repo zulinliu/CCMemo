@@ -17,12 +17,7 @@ pub async fn auth_middleware(
         .get("X-CCMemo-Token")
         .and_then(|v| v.to_str().ok())
         .map(|v| v == state.token)
-        .unwrap_or(false)
-        || req
-            .uri()
-            .query()
-            .map(|q| q.contains(&format!("token={}", &state.token[..8])))
-            .unwrap_or(false);
+        .unwrap_or(false);
 
     if !authed {
         return Err(StatusCode::NOT_FOUND);

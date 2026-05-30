@@ -21,13 +21,16 @@ export function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
-    api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(() => {})
-    api.stats().then(setStats).catch(() => {})
+    api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(e => console.warn('Failed to load projects:', e))
+    api.stats().then(setStats).catch(e => console.warn('Failed to load stats:', e))
   }, [])
 
   useEffect(() => {
     if (selectedId) {
-      api.sessions.get(selectedId).then(setSelectedSession).catch(() => setSelectedSession(null))
+      api.sessions.get(selectedId).then(setSelectedSession).catch(e => {
+        console.warn('Failed to load session:', e)
+        setSelectedSession(null)
+      })
     } else {
       setSelectedSession(null)
     }

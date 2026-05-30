@@ -48,19 +48,21 @@ impl JsonlParser {
     pub fn extract_first_user_content(entries: &[RawEntry]) -> Option<String> {
         for e in entries {
             if e.json.get("type").and_then(|v| v.as_str()) == Some("user")
-                && let Some(content) = e.json.get("message").and_then(|m| m.get("content")) {
-                    if let Some(s) = content.as_str() {
-                        return Some(truncate_preview(s, 200));
-                    }
-                    if let Some(arr) = content.as_array() {
-                        for block in arr {
-                            if block.get("type").and_then(|v| v.as_str()) == Some("text")
-                                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                    return Some(truncate_preview(text, 200));
-                                }
+                && let Some(content) = e.json.get("message").and_then(|m| m.get("content"))
+            {
+                if let Some(s) = content.as_str() {
+                    return Some(truncate_preview(s, 200));
+                }
+                if let Some(arr) = content.as_array() {
+                    for block in arr {
+                        if block.get("type").and_then(|v| v.as_str()) == Some("text")
+                            && let Some(text) = block.get("text").and_then(|v| v.as_str())
+                        {
+                            return Some(truncate_preview(text, 200));
                         }
                     }
                 }
+            }
         }
         None
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Session } from '../lib/types'
 import { api } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
@@ -6,7 +6,6 @@ import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
-import { ThemeToggle } from './ThemeToggle'
 import { Activity, Layers, Sun, Moon } from 'lucide-react'
 
 export function App() {
@@ -19,6 +18,7 @@ export function App() {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [stats, setStats] = useState<{ session_count: number; project_count: number } | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const sessionReqRef = useRef(0)
 
   useEffect(() => {
     api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(e => console.warn('Failed to load projects:', e))
@@ -27,9 +27,16 @@ export function App() {
 
   useEffect(() => {
     if (selectedId) {
-      api.sessions.get(selectedId).then(setSelectedSession).catch(e => {
-        console.warn('Failed to load session:', e)
-        setSelectedSession(null)
+      const reqId = ++sessionReqRef.current
+      api.sessions.get(selectedId).then(session => {
+        if (reqId === sessionReqRef.current) {
+          setSelectedSession(session)
+        }
+      }).catch(e => {
+        if (reqId === sessionReqRef.current) {
+          console.warn('Failed to load session:', e)
+          setSelectedSession(null)
+        }
       })
     } else {
       setSelectedSession(null)

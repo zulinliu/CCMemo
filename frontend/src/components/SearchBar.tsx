@@ -9,24 +9,36 @@ interface SearchBarProps {
 
 export function SearchBar({ value, onChange, placeholder = 'Search sessions...' }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value)
-  const [composing, setComposing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const composingRef = useRef(false)
 
   useEffect(() => {
     setLocalValue(value)
   }, [value])
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current !== undefined) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
   const handleChange = (v: string) => {
     setLocalValue(v)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (debounceRef.current !== undefined) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      if (!composing) onChange(v)
+      if (!composingRef.current) onChange(v)
     }, 300)
   }
 
+  const handleCompositionStart = () => {
+    composingRef.current = true
+  }
+
   const handleCompositionEnd = () => {
-    setComposing(false)
+    composingRef.current = false
     onChange(localValue)
   }
 
@@ -46,7 +58,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search sessions...' 
         type="text"
         value={localValue}
         onChange={e => handleChange(e.target.value)}
-        onCompositionStart={() => setComposing(true)}
+        onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         placeholder={placeholder}
         className="w-full h-9 pl-9 pr-8 text-sm rounded-lg outline-none transition-all duration-200"

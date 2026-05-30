@@ -3,12 +3,18 @@ import type { ApiResponse, Session, PaginatedResult, TimelineEvent, ToolCall, Pr
 const BASE_URL = import.meta.env.DEV ? '' : ''
 
 function getToken(): string {
-  const params = new URLSearchParams(window.location.search)
-  const token = params.get('token')
-  if (token) return token
-
   const stored = sessionStorage.getItem('ccmemo-token')
   if (stored) return stored
+
+  const params = new URLSearchParams(window.location.search)
+  const token = params.get('token')
+  if (token) {
+    sessionStorage.setItem('ccmemo-token', token)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('token')
+    window.history.replaceState({}, '', url.toString())
+    return token
+  }
 
   return ''
 }

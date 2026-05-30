@@ -438,8 +438,13 @@ fn decode_cursor(cursor: &str) -> CursorData {
         .collect();
     let s = String::from_utf8_lossy(&bytes);
     let parts: Vec<&str> = s.splitn(2, '|').collect();
+    let started_at = parts.first().copied().unwrap_or("");
+    let session_id = parts.get(1).copied().unwrap_or("");
+    if started_at.is_empty() || session_id.is_empty() {
+        tracing::warn!("Malformed cursor ignored, pagination will restart from beginning");
+    }
     CursorData {
-        started_at: parts.first().unwrap_or(&"").to_string(),
-        session_id: parts.get(1).unwrap_or(&"").to_string(),
+        started_at: started_at.to_string(),
+        session_id: session_id.to_string(),
     }
 }

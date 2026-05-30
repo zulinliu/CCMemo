@@ -93,6 +93,7 @@ pub fn run_migrations(conn: &rusqlite::Connection) -> crate::domain::error::Resu
         "CREATE INDEX IF NOT EXISTS idx_event_session_seq ON TranscriptEvent(sessionId, sequence);
          CREATE INDEX IF NOT EXISTS idx_event_session_type ON TranscriptEvent(sessionId, type);
          CREATE INDEX IF NOT EXISTS idx_toolcall_event ON ToolCall(eventId);
+         CREATE INDEX IF NOT EXISTS idx_toolcall_session ON ToolCall(sessionId);
          CREATE INDEX IF NOT EXISTS idx_toolcall_filepath ON ToolCall(filePath);
          CREATE INDEX IF NOT EXISTS idx_session_status ON SessionMetadata(status);
          CREATE INDEX IF NOT EXISTS idx_session_project ON SessionMetadata(projectId);

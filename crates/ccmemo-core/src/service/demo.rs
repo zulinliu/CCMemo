@@ -104,8 +104,7 @@ impl<'a> DemoService<'a> {
                 status: SessionStatus::Completed,
                 started_at: (now - chrono::Duration::days(2)).to_rfc3339(),
                 ended_at: Some(
-                    (now - chrono::Duration::days(2) + chrono::Duration::hours(1))
-                        .to_rfc3339(),
+                    (now - chrono::Duration::days(2) + chrono::Duration::hours(1)).to_rfc3339(),
                 ),
                 total_input_tokens: 20000,
                 total_output_tokens: 35000,
@@ -125,8 +124,7 @@ impl<'a> DemoService<'a> {
                 status: SessionStatus::Completed,
                 started_at: (now - chrono::Duration::days(5)).to_rfc3339(),
                 ended_at: Some(
-                    (now - chrono::Duration::days(5) + chrono::Duration::hours(3))
-                        .to_rfc3339(),
+                    (now - chrono::Duration::days(5) + chrono::Duration::hours(3)).to_rfc3339(),
                 ),
                 total_input_tokens: 30000,
                 total_output_tokens: 50000,
@@ -160,9 +158,8 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 2,
                 event_type: "assistant".into(),
-                timestamp: (now - chrono::Duration::hours(2)
-                    + chrono::Duration::seconds(30))
-                .to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2) + chrono::Duration::seconds(30))
+                    .to_rfc3339(),
                 file_offset: 256,
                 byte_length: 512,
                 preview: Some("Let me investigate the token expiry logic...".into()),
@@ -173,9 +170,8 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 3,
                 event_type: "tool_use".into(),
-                timestamp: (now - chrono::Duration::hours(2)
-                    + chrono::Duration::minutes(1))
-                .to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2) + chrono::Duration::minutes(1))
+                    .to_rfc3339(),
                 file_offset: 768,
                 byte_length: 128,
                 preview: Some("Read file: src/auth/token.rs".into()),
@@ -186,9 +182,8 @@ impl<'a> DemoService<'a> {
                 session_id: session_id.into(),
                 sequence: 4,
                 event_type: "tool_result".into(),
-                timestamp: (now - chrono::Duration::hours(2)
-                    + chrono::Duration::minutes(2))
-                .to_rfc3339(),
+                timestamp: (now - chrono::Duration::hours(2) + chrono::Duration::minutes(2))
+                    .to_rfc3339(),
                 file_offset: 896,
                 byte_length: 1024,
                 preview: Some("File content of token.rs with expiry logic...".into()),

@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use axum::{
-    http::HeaderValue,
-    middleware,
     Router,
+    extract::Request,
+    http::{HeaderValue, StatusCode},
+    middleware,
+    middleware::Next,
+    response::Response,
     routing::get,
 };
-use tower_http::cors::{CorsLayer, Any};
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 use super::ServerState;
@@ -29,12 +32,58 @@ pub fn create_app(state: Arc<ServerState>) -> Router {
         .route("/sessions/{id}/tool-calls", get(handlers::get_tool_calls))
         .route("/search", get(handlers::search))
         .route("/stats", get(handlers::get_stats))
-        .layer(middleware::from_fn_with_state(state.clone(), super::auth::auth_middleware));
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            super::auth::auth_middleware,
+        ));
 
     Router::new()
         .nest("/api", api_routes)
         .fallback(handlers::serve_frontend)
+        .layer(middleware::from_fn(security_headers_middleware))
+        .layer(middleware::from_fn(host_validation_middleware))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)
+}
+
+async fn host_validation_middleware(req: Request, next: Next) -> Result<Response, StatusCode> {
+    let valid = req
+        .headers()
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .map(|h| {
+            let host = h.split(':').next().unwrap_or(h);
+            host == "127.0.0.1" || host == "localhost"
+        })
+        .unwrap_or(true);
+
+    if !valid {
+        tracing::debug!("Rejected request with invalid Host header");
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    Ok(next.run(req).await)
+}
+
+async fn security_headers_middleware(req: Request, next: Next) -> Response {
+    let mut resp = next.run(req).await;
+    let headers = resp.headers_mut();
+    headers.insert(
+        axum::http::header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        axum::http::header::X_FRAME_OPTIONS,
+        HeaderValue::from_static("DENY"),
+    );
+    headers.insert(
+        axum::http::header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(
+        axum::http::header::HeaderName::from_static("x-content-security-policy"),
+        HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"),
+    );
+    resp
 }

@@ -88,12 +88,12 @@ impl<'a> SessionIndexer<'a> {
 
         if !full
             && let Some(bookmark) = self.db.get_bookmark(&file_path_str)?
-                && bookmark.file_hash.as_deref() == Some(&file_hash)
-                    && bookmark.last_indexed_line == line_count
-                {
-                    tracing::debug!("Skipping unchanged file: {file_path_str}");
-                    return Ok(FileScanResult::default());
-                }
+            && bookmark.file_hash.as_deref() == Some(&file_hash)
+            && bookmark.last_indexed_line == line_count
+        {
+            tracing::debug!("Skipping unchanged file: {file_path_str}");
+            return Ok(FileScanResult::default());
+        }
 
         let session_id = match JsonlParser::extract_session_id(&entries) {
             Some(id) => id,

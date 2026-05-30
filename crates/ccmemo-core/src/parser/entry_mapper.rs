@@ -79,13 +79,14 @@ impl EntryMapper {
             match event_type {
                 "queue-operation" => {
                     if let Some("enqueue") = entry.json.get("operation").and_then(|v| v.as_str())
-                        && extract.first_user_message.is_none() {
-                            extract.first_user_message = entry
-                                .json
-                                .get("content")
-                                .and_then(|v| v.as_str())
-                                .map(|s| truncate_str(s, 200));
-                        }
+                        && extract.first_user_message.is_none()
+                    {
+                        extract.first_user_message = entry
+                            .json
+                            .get("content")
+                            .and_then(|v| v.as_str())
+                            .map(|s| truncate_str(s, 200));
+                    }
                 }
                 "user" => {
                     if extract.first_user_message.is_none() {
@@ -254,22 +255,22 @@ impl EntryMapper {
                                 .tool_calls
                                 .iter_mut()
                                 .find(|tc| tc.id == tool_use_id)
-                            {
-                                let output = block.get("content").and_then(|c| {
-                                    if let Some(s) = c.as_str() {
-                                        Some(truncate_str(s, 200))
-                                    } else if let Some(arr) = c.as_array() {
-                                        let texts: Vec<&str> = arr
-                                            .iter()
-                                            .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
-                                            .collect();
-                                        Some(truncate_str(&texts.join(""), 200))
-                                    } else {
-                                        None
-                                    }
-                                });
-                                tc.output_summary = output;
-                            }
+                        {
+                            let output = block.get("content").and_then(|c| {
+                                if let Some(s) = c.as_str() {
+                                    Some(truncate_str(s, 200))
+                                } else if let Some(arr) = c.as_array() {
+                                    let texts: Vec<&str> = arr
+                                        .iter()
+                                        .filter_map(|b| b.get("text").and_then(|t| t.as_str()))
+                                        .collect();
+                                    Some(truncate_str(&texts.join(""), 200))
+                                } else {
+                                    None
+                                }
+                            });
+                            tc.output_summary = output;
+                        }
                     }
                     _ => {}
                 }
@@ -290,9 +291,10 @@ impl EntryMapper {
                     if let Some(arr) = c.as_array() {
                         for block in arr {
                             if block.get("type").and_then(|v| v.as_str()) == Some("text")
-                                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                    return Some(truncate_str(text, 200));
-                                }
+                                && let Some(text) = block.get("text").and_then(|v| v.as_str())
+                            {
+                                return Some(truncate_str(text, 200));
+                            }
                         }
                     }
                     None
@@ -315,9 +317,10 @@ fn extract_user_text(json: &Value) -> Option<String> {
     if let Some(arr) = content.as_array() {
         for block in arr {
             if block.get("type").and_then(|v| v.as_str()) == Some("text")
-                && let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                    return Some(truncate_str(text, 200));
-                }
+                && let Some(text) = block.get("text").and_then(|v| v.as_str())
+            {
+                return Some(truncate_str(text, 200));
+            }
         }
     }
     None

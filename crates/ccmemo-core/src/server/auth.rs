@@ -7,6 +7,17 @@ use axum::{
 
 use super::ServerState;
 
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut result = 0u8;
+    for (x, y) in a.bytes().zip(b.bytes()) {
+        result |= x ^ y;
+    }
+    result == 0
+}
+
 pub async fn auth_middleware(
     State(state): State<std::sync::Arc<ServerState>>,
     req: Request,
@@ -16,10 +27,11 @@ pub async fn auth_middleware(
         .headers()
         .get("X-CCMemo-Token")
         .and_then(|v| v.to_str().ok())
-        .map(|v| v == state.token)
+        .map(|v| constant_time_eq(v, &state.token))
         .unwrap_or(false);
 
     if !authed {
+        tracing::debug!("Auth rejected for request to {}", req.uri().path());
         return Err(StatusCode::NOT_FOUND);
     }
 

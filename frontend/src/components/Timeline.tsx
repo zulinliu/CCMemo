@@ -13,12 +13,17 @@ export function Timeline({ session }: TimelineProps) {
   const [cursor, setCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const requestIdRef = useRef(0)
 
   const loadEvents = useCallback(async (cur?: string) => {
+    const requestId = ++requestIdRef.current
     try {
       setLoading(true)
+      setError(null)
       const result = await api.sessions.timeline(session.session_id, cur, 200)
+      if (requestId !== requestIdRef.current) return
       if (cur) {
         setEvents(prev => [...prev, ...result.items])
       } else {
@@ -26,18 +31,37 @@ export function Timeline({ session }: TimelineProps) {
       }
       setCursor(result.next_cursor)
       setHasMore(result.has_more)
-    } catch {
-      // silently handle
+    } catch (e) {
+      if (requestId !== requestIdRef.current) return
+      setError(e instanceof Error ? e.message : 'Failed to load events')
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+      }
     }
   }, [session.session_id])
 
   useEffect(() => {
     setEvents([])
     setCursor(null)
+    setError(null)
     loadEvents()
   }, [loadEvents])
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6">
+        <AlertCircle size={24} style={{ color: 'var(--color-accent)' }} className="mb-3" />
+        <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">Failed to load events</p>
+        <p style={{ color: 'var(--color-text-muted)' }} className="text-xs text-center mb-3">{error}</p>
+        <button onClick={() => loadEvents()}
+          className="text-xs px-3 py-1.5 rounded-lg"
+          style={{ background: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
+          Retry
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div ref={containerRef} className="h-full overflow-y-auto">

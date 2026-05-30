@@ -7,7 +7,7 @@ import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
 import { BottomTabBar, type MobileTab } from './BottomTabBar'
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, LogOut } from 'lucide-react'
 
 export function MobileLayout() {
   const { theme, toggle } = useTheme()
@@ -46,10 +46,17 @@ export function MobileLayout() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 h-11 shrink-0 border-b border-[var(--color-border-primary)]">
         <span className="text-sm font-semibold text-[var(--color-text-primary)]">CCMemo</span>
-        <button onClick={toggle}
-          className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]">
-          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-        </button>
+        <div className="flex items-center">
+          <button onClick={toggle}
+            className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]">
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          </button>
+          <button onClick={async () => { await api.auth.logout(); window.location.reload() }}
+            className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]"
+            title="退出登录">
+            <LogOut size={16} />
+          </button>
+        </div>
       </header>
 
       {/* Content */}

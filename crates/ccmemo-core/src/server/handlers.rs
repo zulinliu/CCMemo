@@ -8,12 +8,15 @@ use axum::{
 };
 use rust_embed::RustEmbed;
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 
 use super::ServerState;
 use crate::domain::types::{SessionQuery, SessionStatus};
 use crate::storage::{EventRepository, ProjectRepository, SessionRepository};
 
 const MAX_LIMIT: usize = 200;
+const COOKIE_NAME: &str = "ccmemo_session";
+const COOKIE_MAX_AGE: i64 = 86400 * 7;
 
 #[derive(RustEmbed)]
 #[folder = "../../frontend/dist/"]
@@ -319,6 +322,116 @@ pub async fn serve_frontend(req: Request) -> Response<Body> {
     }
 }
 
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub password: String,
+}
+
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut result = 0u8;
+    for (x, y) in a.bytes().zip(b.bytes()) {
+        result |= x ^ y;
+    }
+    result == 0
+}
+
+fn hash_password(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let bytes = hasher.finalize();
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn get_session_cookie(req: &Request) -> Option<String> {
+    req.headers()
+        .get("cookie")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|pair| {
+                let mut parts = pair.trim().splitn(2, '=');
+                let key = parts.next()?.trim();
+                let value = parts.next()?.trim();
+                if key == COOKIE_NAME { Some(value.to_string()) } else { None }
+            })
+        })
+}
+
+fn make_session_cookie(value: &str, max_age: i64) -> String {
+    format!(
+        "{COOKIE_NAME}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}"
+    )
+}
+
+fn is_session_valid(state: &ServerState, req: &Request) -> bool {
+    get_session_cookie(req)
+        .map(|sid| {
+            let sessions = state.active_sessions.lock().unwrap();
+            sessions.contains(&sid)
+        })
+        .unwrap_or(false)
+}
+
+pub async fn login(
+    State(state): State<Arc<ServerState>>,
+    Json(body): Json<LoginRequest>,
+) -> Response<Body> {
+    let hash = hash_password(&body.password);
+    if !constant_time_eq(&hash, &state.password_hash) {
+        let body = serde_json::json!({"status": "error", "message": "密码错误"});
+        return (StatusCode::UNAUTHORIZED, Json(body)).into_response();
+    }
+
+    let session_id = uuid::Uuid::new_v4().to_string();
+    {
+        let mut sessions = state.active_sessions.lock().unwrap();
+        sessions.insert(session_id.clone());
+    }
+
+    let cookie = make_session_cookie(&session_id, COOKIE_MAX_AGE);
+    let resp_body = serde_json::json!({"status": "ok", "data": {}});
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::SET_COOKIE, cookie)
+        .body(Body::from(serde_json::to_string(&resp_body).unwrap()))
+        .unwrap()
+}
+
+pub async fn logout(
+    State(state): State<Arc<ServerState>>,
+    req: Request,
+) -> Response<Body> {
+    if let Some(sid) = get_session_cookie(&req) {
+        let mut sessions = state.active_sessions.lock().unwrap();
+        sessions.remove(&sid);
+    }
+
+    let cookie = make_session_cookie("", 0);
+    let resp_body = serde_json::json!({"status": "ok", "data": {}});
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::SET_COOKIE, cookie)
+        .body(Body::from(serde_json::to_string(&resp_body).unwrap()))
+        .unwrap()
+}
+
+pub async fn auth_check(
+    State(state): State<Arc<ServerState>>,
+    req: Request,
+) -> Response<Body> {
+    let authenticated = is_session_valid(&state, &req);
+    let body = serde_json::json!({"status": "ok", "data": {"authenticated": authenticated}});
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_string(&body).unwrap()))
+        .unwrap()
+}
+
 #[derive(serde::Serialize)]
 pub struct ApiResponse<T: serde::Serialize> {
     pub status: &'static str,
@@ -335,12 +448,14 @@ impl<T: serde::Serialize> ApiResponse<T> {
 pub enum ApiError {
     NotFound(String),
     Internal(String),
+    Unauthorized(String),
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response<Body> {
         let (status, message) = match self {
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            ApiError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             ApiError::Internal(msg) => {
                 tracing::error!("Internal error: {msg}");
                 (

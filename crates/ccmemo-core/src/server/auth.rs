@@ -7,15 +7,20 @@ use axum::{
 
 use super::ServerState;
 
-fn constant_time_eq(a: &str, b: &str) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut result = 0u8;
-    for (x, y) in a.bytes().zip(b.bytes()) {
-        result |= x ^ y;
-    }
-    result == 0
+fn get_cookie_value(cookie_header: &str, name: &str) -> Option<String> {
+    cookie_header
+        .split(';')
+        .filter_map(|pair| {
+            let mut parts = pair.trim().splitn(2, '=');
+            let key = parts.next()?.trim();
+            let value = parts.next()?.trim();
+            if key == name {
+                Some(value.to_string())
+            } else {
+                None
+            }
+        })
+        .next()
 }
 
 pub async fn auth_middleware(
@@ -25,14 +30,17 @@ pub async fn auth_middleware(
 ) -> Result<Response, StatusCode> {
     let authed = req
         .headers()
-        .get("X-CCMemo-Token")
+        .get("cookie")
         .and_then(|v| v.to_str().ok())
-        .map(|v| constant_time_eq(v, &state.token))
+        .and_then(|cookies| get_cookie_value(cookies, "ccmemo_session"))
+        .map(|session_id| {
+            let sessions = state.active_sessions.lock().unwrap();
+            sessions.contains(&session_id)
+        })
         .unwrap_or(false);
 
     if !authed {
-        tracing::debug!("Auth rejected for request to {}", req.uri().path());
-        return Err(StatusCode::NOT_FOUND);
+        return Err(StatusCode::UNAUTHORIZED);
     }
 
     Ok(next.run(req).await)

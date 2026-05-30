@@ -7,6 +7,7 @@ pub struct Config {
     pub claude_config_dir: PathBuf,
     pub db_path: PathBuf,
     pub export_dir: PathBuf,
+    pub password: String,
 }
 
 impl Config {
@@ -30,10 +31,14 @@ impl Config {
             .map(PathBuf::from)
             .unwrap_or_else(|_| home.join("ccmemo-exports"));
 
+        let password = std::env::var("CCMEMO_PASSWORD")
+            .unwrap_or_else(|_| "123456".to_string());
+
         Ok(Self {
             claude_config_dir,
             db_path,
             export_dir,
+            password,
         })
     }
 }

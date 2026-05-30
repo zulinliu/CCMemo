@@ -6,7 +6,7 @@ import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
-import { Activity, Layers, Sun, Moon } from 'lucide-react'
+import { Activity, Layers, Sun, Moon, LogOut } from 'lucide-react'
 
 export function DesktopLayout() {
   const { theme, toggle } = useTheme()
@@ -64,6 +64,12 @@ export function DesktopLayout() {
               hover:bg-[var(--color-surface-hover)]"
             title={`切换到${theme === 'light' ? '深色' : '浅色'}主题`}>
             {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+          </button>
+          <button onClick={async () => { await api.auth.logout(); window.location.reload() }}
+            className="p-1.5 rounded-lg transition-colors duration-200 text-[var(--color-text-tertiary)]
+              hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-accent)]"
+            title="退出登录">
+            <LogOut size={15} />
           </button>
         </div>
       </header>

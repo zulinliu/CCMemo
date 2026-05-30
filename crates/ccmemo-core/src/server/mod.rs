@@ -2,9 +2,11 @@ pub mod app;
 pub mod auth;
 pub mod handlers;
 
+use std::collections::HashSet;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use sha2::{Digest, Sha256};
 use tokio::net::TcpListener;
 
 use crate::domain::error::Result;
@@ -13,16 +15,25 @@ use crate::storage::sqlite::Database;
 
 pub struct ServerState {
     pub db: Arc<Database>,
-    pub token: String,
+    pub password_hash: String,
+    pub active_sessions: Mutex<HashSet<String>>,
+}
+
+fn hash_password(password: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let bytes = hasher.finalize();
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 pub async fn start_server(config: &Config, port: Option<u16>) -> Result<()> {
     let db = Database::open(&config.db_path)?;
-    let token = uuid::Uuid::new_v4().to_string();
+    let password_hash = hash_password(&config.password);
 
     let state = Arc::new(ServerState {
         db: Arc::new(db),
-        token: token.clone(),
+        password_hash,
+        active_sessions: Mutex::new(HashSet::new()),
     });
 
     let app = app::create_app(state);
@@ -35,7 +46,6 @@ pub async fn start_server(config: &Config, port: Option<u16>) -> Result<()> {
     let url = format!("http://127.0.0.1:{actual_port}");
 
     println!("CCMemo server running at {url}");
-    eprintln!("CCMEMO_TOKEN={token}");
     eprintln!("CCMEMO_URL={url}");
 
     axum::serve(listener, app).await?;

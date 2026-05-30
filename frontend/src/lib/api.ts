@@ -2,34 +2,14 @@ import type { ApiResponse, Session, PaginatedResult, TimelineEvent, ToolCall, Pr
 
 const BASE_URL = import.meta.env.DEV ? '' : ''
 
-function getToken(): string {
-  const stored = sessionStorage.getItem('ccmemo-token')
-  if (stored) return stored
-
-  const params = new URLSearchParams(window.location.search)
-  const token = params.get('token')
-  if (token) {
-    sessionStorage.setItem('ccmemo-token', token)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('token')
-    window.history.replaceState({}, '', url.toString())
-    return token
-  }
-
-  return ''
-}
-
-function setToken(token: string) {
-  sessionStorage.setItem('ccmemo-token', token)
-}
-
 async function apiFetch<T>(path: string): Promise<T> {
-  const token = getToken()
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      'X-CCMemo-Token': token,
-    },
+    credentials: 'same-origin',
   })
+  if (res.status === 401) {
+    window.dispatchEvent(new Event('ccmemo:unauthorized'))
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`)
   }
@@ -41,6 +21,35 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    login: async (password: string): Promise<boolean> => {
+      const res = await fetch(`${BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      return res.ok
+    },
+    logout: async () => {
+      await fetch(`${BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      })
+    },
+    check: async (): Promise<boolean> => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/auth/check`, {
+          credentials: 'same-origin',
+        })
+        if (!res.ok) return false
+        const json = await res.json()
+        return json.data?.authenticated === true
+      } catch {
+        return false
+      }
+    },
+  },
   sessions: {
     list: (params?: {
       project_id?: string
@@ -81,6 +90,4 @@ export const api = {
     },
   },
   stats: () => apiFetch<Stats>('/api/stats'),
-  setToken,
-  getToken,
 }

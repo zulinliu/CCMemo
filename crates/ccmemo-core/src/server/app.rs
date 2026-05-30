@@ -7,7 +7,7 @@ use axum::{
     middleware,
     middleware::Next,
     response::Response,
-    routing::get,
+    routing::{get, post},
 };
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -20,6 +20,11 @@ pub fn create_app(state: Arc<ServerState>) -> Router {
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
+
+    let auth_routes = Router::new()
+        .route("/auth/login", post(handlers::login))
+        .route("/auth/logout", post(handlers::logout))
+        .route("/auth/check", get(handlers::auth_check));
 
     let api_routes = Router::new()
         .route("/projects", get(handlers::list_projects))
@@ -35,6 +40,7 @@ pub fn create_app(state: Arc<ServerState>) -> Router {
         ));
 
     Router::new()
+        .nest("/api", auth_routes)
         .nest("/api", api_routes)
         .fallback(handlers::serve_frontend)
         .layer(middleware::from_fn(security_headers_middleware))

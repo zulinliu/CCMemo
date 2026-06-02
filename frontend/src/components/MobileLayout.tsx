@@ -6,16 +6,25 @@ import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
+import { Select } from './Select'
 import { BottomTabBar, type MobileTab } from './BottomTabBar'
-import { Sun, Moon, LogOut } from 'lucide-react'
+import { Sun, Moon, LogOut, Inbox } from 'lucide-react'
+
+const statusOptions = [
+  { value: '', label: '状态' },
+  { value: 'active', label: '进行中' },
+  { value: 'completed', label: '已完成' },
+  { value: 'interrupted', label: '已中断' },
+  { value: 'unrecoverable', label: '异常' },
+]
 
 export function MobileLayout() {
   const { theme, toggle } = useTheme()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [projectFilter, setProjectFilter] = useState<string | undefined>()
-  const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [projectFilter, setProjectFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('')
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [tab, setTab] = useState<MobileTab>('sessions')
 
@@ -41,60 +50,91 @@ export function MobileLayout() {
     else if (selectedSession) setTab(t)
   }
 
+  const projectOptions = [
+    { value: '', label: '全部项目' },
+    ...projects.map(p => ({ value: p.id, label: p.name })),
+  ]
+
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-[var(--color-bg-primary)]">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 h-11 shrink-0 border-b border-[var(--color-border-primary)]">
-        <span className="text-sm font-semibold text-[var(--color-text-primary)]">CCMemo</span>
-        <div className="flex items-center">
-          <button onClick={toggle}
-            className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]">
-            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+      <header
+        className="flex items-center justify-between shrink-0 border-b border-[var(--color-border-primary)]"
+        style={{
+          minHeight: 'var(--space-7)',
+          paddingTop: 'max(env(safe-area-inset-top, 0px), var(--space-3))',
+          paddingBottom: 'var(--space-3)',
+          paddingLeft: 'var(--space-4)',
+          paddingRight: 'var(--space-4)',
+        }}
+      >
+        <span className="text-base font-semibold text-[var(--color-text-primary)]">CCMemo</span>
+        <div className="flex items-center" style={{ gap: 'var(--space-1)' }}>
+          <button
+            onClick={toggle}
+            className="rounded-lg transition-colors duration-200 text-[var(--color-text-tertiary)]
+              hover:bg-[var(--color-surface-hover)] focus-visible:ring-0 focus-ring"
+            style={{ padding: 'var(--space-2)' }}
+            aria-label={`切换到${theme === 'light' ? '深色' : '浅色'}主题`}
+            title={`切换到${theme === 'light' ? '深色' : '浅色'}主题`}
+          >
+            {theme === 'light' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
           </button>
-          <button onClick={async () => { await api.auth.logout(); window.location.reload() }}
-            className="p-2.5 rounded-lg active:opacity-60 text-[var(--color-text-tertiary)]"
-            title="退出登录">
-            <LogOut size={16} />
+          <button
+            onClick={async () => { await api.auth.logout(); window.location.reload() }}
+            className="rounded-lg transition-colors duration-200 text-[var(--color-text-tertiary)]
+              hover:bg-[var(--color-surface-hover)] focus-visible:ring-0 focus-ring"
+            style={{ padding: 'var(--space-2)' }}
+            aria-label="退出登录"
+            title="退出登录"
+          >
+            <LogOut size={18} aria-hidden="true" />
           </button>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden pb-14">
+      <main className="flex-1 overflow-hidden min-h-0">
         {tab === 'sessions' && (
           <div className="flex flex-col h-full">
-            <div className="px-4 pt-3 pb-3 space-y-2.5 border-b border-[var(--color-border-primary)]">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话..." />
-              <div className="flex gap-2">
-                <select
-                  value={projectFilter ?? ''}
-                  onChange={e => setProjectFilter(e.target.value || undefined)}
-                  className="flex-1 min-w-0 h-10 px-3 text-xs rounded-lg outline-none
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-secondary)]
-                    focus:border-[var(--color-border-focus)] focus-ring">
-                  <option value="">全部项目</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <select
-                  value={statusFilter ?? ''}
-                  onChange={e => setStatusFilter(e.target.value || undefined)}
-                  className="w-24 shrink-0 h-10 px-3 text-xs rounded-lg outline-none
-                    bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-secondary)]
-                    focus:border-[var(--color-border-focus)] focus-ring">
-                  <option value="">状态</option>
-                  <option value="active">进行中</option>
-                  <option value="completed">已完成</option>
-                  <option value="interrupted">已中断</option>
-                </select>
+            <div
+              className="shrink-0 border-b border-[var(--color-border-primary)] flex flex-col"
+              style={{
+                paddingLeft: 'var(--space-4)',
+                paddingRight: 'var(--space-4)',
+                paddingTop: 'var(--space-4)',
+                paddingBottom: 'var(--space-3)',
+                gap: 'var(--space-3)',
+              }}
+            >
+              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话…" />
+              <div className="flex" style={{ gap: 'var(--space-2)' }}>
+                <Select
+                  className="flex-1 min-w-0"
+                  value={projectFilter}
+                  onChange={setProjectFilter}
+                  options={projectOptions}
+                  ariaLabel="按项目筛选会话"
+                  size="lg"
+                />
+                <Select
+                  className="shrink-0"
+                  style={{ minWidth: '104px' }}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={statusOptions}
+                  ariaLabel="按状态筛选会话"
+                  size="lg"
+                />
               </div>
             </div>
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden min-h-0">
               <SessionList
                 onSelect={handleSelect}
                 selectedId={selectedId ?? undefined}
                 searchQuery={searchQuery || undefined}
-                projectId={projectFilter}
-                statusFilter={statusFilter}
+                projectId={projectFilter || undefined}
+                statusFilter={statusFilter || undefined}
               />
             </div>
           </div>
@@ -104,7 +144,11 @@ export function MobileLayout() {
           selectedSession ? (
             <Timeline session={selectedSession} />
           ) : (
-            <EmptyState message="请先选择一个会话以查看时间线" />
+            <EmptyState
+              icon={<Inbox size={24} aria-hidden="true" />}
+              title="还没有选中会话"
+              message="在「会话」标签中选择一个会话，查看其时间线事件"
+            />
           )
         )}
 
@@ -114,10 +158,14 @@ export function MobileLayout() {
               <SessionDetail session={selectedSession} />
             </div>
           ) : (
-            <EmptyState message="请先选择一个会话以查看详情" />
+            <EmptyState
+              icon={<Inbox size={24} aria-hidden="true" />}
+              title="还没有选中会话"
+              message="在「会话」标签中选择一个会话，查看其详情信息"
+            />
           )
         )}
-      </div>
+      </main>
 
       {/* Bottom Tab Bar */}
       <BottomTabBar active={tab} onChange={handleTabChange} hasSession={!!selectedSession} />
@@ -125,10 +173,33 @@ export function MobileLayout() {
   )
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ icon, title, message }: { icon: React.ReactNode; title: string; message: string }) {
   return (
-    <div className="flex items-center justify-center h-full px-6">
-      <p className="text-sm text-center text-[var(--color-text-muted)]">{message}</p>
+    <div className="flex items-center justify-center h-full">
+      <div
+        className="flex flex-col items-center"
+        style={{
+          paddingLeft: 'var(--space-6)',
+          paddingRight: 'var(--space-6)',
+          maxWidth: '320px',
+          gap: 'var(--space-3)',
+        }}
+      >
+        <div
+          className="rounded-2xl flex items-center justify-center bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]"
+          style={{ width: '64px', height: '64px' }}
+          aria-hidden="true"
+        >
+          {icon}
+        </div>
+        <h2
+          className="text-base font-semibold text-[var(--color-text-primary)] text-center"
+          style={{ marginTop: 'var(--space-1)' }}
+        >
+          {title}
+        </h2>
+        <p className="text-sm text-center text-[var(--color-text-muted)]">{message}</p>
+      </div>
     </div>
   )
 }

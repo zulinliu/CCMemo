@@ -17,6 +17,22 @@ Thumbs.db
 *.orig
 
 # Frontend
-frontend/node_modules/
 frontend/dist/
-frontend/.vite/
+frontend/node_modules/
+frontend/vite.config.ts.timestamp-*
+frontend/vite.config.js.timestamp-*
+
+# Root-level dev tooling (mock backend deps)
+node_modules/
+package-lock.json
+
+# Dev screenshots and debug helpers (debug-only, never commit)
+/screenshot*.ps1
+/review-*.png
+/final-*.png
+/mobile-v*-*.png
+/smoke-*.png
+/capture*.js
+/mobile-v*.js
+/smoke.js
+/verify-*.mjs

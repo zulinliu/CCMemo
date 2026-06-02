@@ -8,10 +8,10 @@ export function formatRelativeTime(iso: string): string {
   const diffWeek = Math.floor(diffDay / 7)
 
   if (diffMin < 1) return '刚刚'
-  if (diffHr < 1) return `${diffMin}分钟前`
-  if (diffDay < 1) return `${diffHr}小时前`
-  if (diffWeek < 1) return `${diffDay}天前`
-  return `${diffWeek}周前`
+  if (diffHr < 1) return `${diffMin} 分钟前`
+  if (diffDay < 1) return `${diffHr} 小时前`
+  if (diffWeek < 1) return `${diffDay} 天前`
+  return `${diffWeek} 周前`
 }
 
 export function formatDate(iso: string): string {

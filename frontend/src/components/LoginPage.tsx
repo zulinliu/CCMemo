@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Lock, LogIn } from 'lucide-react'
 import { api } from '../lib/api'
 
@@ -10,6 +10,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const errorRef = useRef<HTMLParagraphElement>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -17,71 +18,151 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError('')
     setLoading(true)
     try {
-      const ok = await api.auth.login(password)
-      if (ok) {
+      const result = await api.auth.login(password)
+      if (result.ok) {
         onLogin()
+      } else if (result.reason === 'wrong-password') {
+        setError('密码错误，请检查后重试（连续 5 次错误将临时锁定）')
+        errorRef.current?.focus()
+      } else if (result.reason === 'network') {
+        setError('无法连接到服务，请检查网络后重试')
+        errorRef.current?.focus()
       } else {
-        setError('密码错误，请重试')
+        setError('服务暂时不可用，请稍后重试')
+        errorRef.current?.focus()
       }
     } catch {
-      setError('网络错误，请重试')
+      setError('无法连接到服务，请检查网络后重试')
+      errorRef.current?.focus()
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex items-center justify-center min-h-dvh bg-[var(--color-bg-primary)] px-4">
+    <main
+      className="flex items-center justify-center min-h-dvh bg-[var(--color-bg-primary)]"
+      style={{ paddingLeft: 'var(--space-4)', paddingRight: 'var(--space-4)' }}
+    >
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-[var(--color-bg-secondary)]">
+        <div
+          className="flex flex-col items-center"
+          style={{
+            marginBottom: 'var(--space-7)',
+            gap: 'var(--space-3)',
+          }}
+        >
+          <div
+            className="rounded-2xl flex items-center justify-center bg-[var(--color-bg-secondary)]"
+            style={{ width: '64px', height: '64px' }}
+            aria-hidden="true"
+          >
             <Lock size={28} className="text-[var(--color-accent)]" />
           </div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">CCMemo</h1>
-          <p className="text-sm text-[var(--color-text-muted)]">请输入密码以继续</p>
+          <h1
+            className="text-2xl font-bold text-[var(--color-text-primary)] text-center"
+            style={{ marginTop: 'var(--space-1)' }}
+          >
+            CCMemo
+          </h1>
+          <p className="text-sm text-[var(--color-text-muted)] text-center">请输入密码以继续</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <div>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
+            <label
+              htmlFor="ccmemo-password"
+              className="block text-xs font-medium text-[var(--color-text-secondary)]"
+              style={{ marginBottom: 'var(--space-2)' }}
+            >
               访问密码
             </label>
             <input
+              id="ccmemo-password"
+              name="password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="请输入密码"
+              autoComplete="current-password"
+              spellCheck={false}
               autoFocus
               disabled={loading}
-              className="w-full h-11 px-3 text-sm rounded-lg outline-none
+              aria-invalid={error ? 'true' : 'false'}
+              aria-describedby={error ? 'ccmemo-password-error' : undefined}
+              className="w-full text-sm rounded-lg outline-none
                 bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-primary)]
                 placeholder:text-[var(--color-text-muted)]
-                focus:border-[var(--color-border-focus)] focus-ring
+                focus:border-[var(--color-border-focus)] focus-visible:ring-0 focus-ring
                 disabled:opacity-50"
+              style={{
+                height: 'var(--height-control-xl)',
+                paddingLeft: 'var(--space-4)',
+                paddingRight: 'var(--space-4)',
+              }}
             />
           </div>
 
           {error && (
-            <p className="text-xs text-[var(--color-status-unrecoverable)]">{error}</p>
+            <p
+              id="ccmemo-password-error"
+              ref={errorRef}
+              tabIndex={-1}
+              role="alert"
+              aria-live="polite"
+              className="text-xs text-[var(--color-status-unrecoverable)]"
+            >
+              {error}
+            </p>
           )}
 
           <button
             type="submit"
             disabled={loading || !password.trim()}
-            className="w-full h-11 flex items-center justify-center gap-2 rounded-lg font-medium text-sm text-white
+            className="w-full flex items-center justify-center rounded-lg font-medium text-sm text-white
               bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)]
               transition-colors duration-150
               disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              height: 'var(--height-control-xl)',
+              gap: 'var(--space-2)',
+            }}
           >
             {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <>
+                <span
+                  className="inline-block border-2 border-white/30 border-t-white rounded-full animate-spin"
+                  style={{ width: '16px', height: '16px' }}
+                  aria-hidden="true"
+                />
+                <span>正在登录…</span>
+              </>
             ) : (
-              <LogIn size={15} />
+              <>
+                <LogIn size={15} aria-hidden="true" />
+                <span>登录</span>
+              </>
             )}
-            {loading ? '正在登录...' : '登录'}
           </button>
         </form>
+
+        <div
+          className="flex items-center text-xs text-[var(--color-text-muted)]"
+          style={{ marginTop: 'var(--space-6)', gap: 'var(--space-3)' }}
+        >
+          <span
+            className="flex-1 bg-[var(--color-border-primary)]"
+            style={{ height: '1px' }}
+            aria-hidden="true"
+          />
+          <span>本机部署 · 数据不出本地</span>
+          <span
+            className="flex-1 bg-[var(--color-border-primary)]"
+            style={{ height: '1px' }}
+            aria-hidden="true"
+          />
+        </div>
       </div>
-    </div>
+    </main>
   )
 }

@@ -24,7 +24,12 @@ export function App() {
   if (authed === null) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-[var(--color-bg-primary)]">
-        <div className="w-6 h-6 border-2 border-[var(--color-text-muted)] border-t-[var(--color-accent)] rounded-full animate-spin" />
+        <div
+          className="border-2 border-[var(--color-text-muted)] border-t-[var(--color-accent)] rounded-full animate-spin"
+          style={{ width: '24px', height: '24px' }}
+          role="status"
+          aria-label="正在加载"
+        />
       </div>
     )
   }

@@ -22,14 +22,21 @@ async function apiFetch<T>(path: string): Promise<T> {
 
 export const api = {
   auth: {
-    login: async (password: string): Promise<boolean> => {
-      const res = await fetch(`${BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
-      return res.ok
+    login: async (password: string): Promise<{ ok: boolean; reason?: 'wrong-password' | 'network' | 'server-error' }> => {
+      let res: Response
+      try {
+        res = await fetch(`${BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        })
+      } catch {
+        return { ok: false, reason: 'network' }
+      }
+      if (res.ok) return { ok: true }
+      if (res.status === 401) return { ok: false, reason: 'wrong-password' }
+      return { ok: false, reason: 'server-error' }
     },
     logout: async () => {
       await fetch(`${BASE_URL}/api/auth/logout`, {

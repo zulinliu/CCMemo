@@ -1,6 +1,6 @@
 import type { Session } from '../lib/types'
 import { formatDate, statusColor, statusBgColor, formatTokenCount } from '../lib/utils'
-import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor, Copy, Check } from 'lucide-react'
+import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor, Copy, Check, Zap } from 'lucide-react'
 import { useState } from 'react'
 
 const statusLabel: Record<string, string> = {
@@ -16,45 +16,82 @@ interface SessionDetailProps {
 
 export function SessionDetail({ session }: SessionDetailProps) {
   return (
-    <div className="p-4 space-y-4">
-      <div>
-        <h2 className="text-base font-semibold leading-snug mb-2 text-[var(--color-text-primary)]">
-          {session.auto_title}
-        </h2>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
-            style={{
-              background: statusBgColor(session.status),
-              color: statusColor(session.status),
-            }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
-            <span>{statusLabel[session.status] || session.status}</span>
-          </span>
-        </div>
-      </div>
+    <div
+      style={{
+        paddingLeft: 'var(--space-4)',
+        paddingRight: 'var(--space-4)',
+        paddingTop: 'var(--space-5)',
+        paddingBottom: 'var(--space-7)',
+      }}
+    >
+      <div className="flex flex-col" style={{ gap: 'var(--space-5)' }}>
+        <header>
+          <h2
+            className="text-base font-semibold leading-snug break-words text-[var(--color-text-primary)]"
+            style={{ marginBottom: 'var(--space-3)' }}
+          >
+            {session.auto_title}
+          </h2>
+          <div className="flex items-center flex-wrap" style={{ gap: 'var(--space-2)' }}>
+            <span
+              className="inline-flex items-center text-xs font-medium rounded-full"
+              style={{
+                gap: 'var(--space-1)',
+                paddingLeft: 'var(--space-3)',
+                paddingRight: 'var(--space-3)',
+                paddingTop: '4px',
+                paddingBottom: '4px',
+                background: statusBgColor(session.status),
+                color: statusColor(session.status),
+              }}
+              aria-label={`状态：${statusLabel[session.status] || session.status}`}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: statusColor(session.status) }}
+                aria-hidden="true"
+              />
+              <span>{statusLabel[session.status] || session.status}</span>
+            </span>
+          </div>
+        </header>
 
-      <div className="space-y-2.5">
-        <DetailRow icon={<Clock size={13} />} label="开始" value={formatDate(session.started_at)} />
-        {session.ended_at && <DetailRow icon={<Clock size={13} />} label="结束" value={formatDate(session.ended_at)} />}
-        {session.branch && <DetailRow icon={<GitBranch size={13} />} label="分支" value={session.branch} mono />}
-        {session.model && <DetailRow icon={<Monitor size={13} />} label="模型" value={session.model} />}
-      </div>
+        <section
+          className="flex flex-col border-t border-[var(--color-border-primary)]"
+          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-2)' }}
+        >
+          <DetailRow icon={<Clock size={13} aria-hidden="true" />} label="开始" value={formatDate(session.started_at)} />
+          {session.ended_at && <DetailRow icon={<Clock size={13} aria-hidden="true" />} label="结束" value={formatDate(session.ended_at)} />}
+          {session.branch && <DetailRow icon={<GitBranch size={13} aria-hidden="true" />} label="分支" value={session.branch} mono />}
+          {session.model && <DetailRow icon={<Monitor size={13} aria-hidden="true" />} label="模型" value={session.model} />}
+        </section>
 
-      <div className="pt-3 space-y-2 border-t border-[var(--color-border-primary)]">
-        <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-          统计
-        </h4>
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard icon={<FileText size={13} />} label="文件" value={String(session.file_count)} />
-          <StatCard icon={<Cpu size={13} />} label="工具调用" value={String(session.tool_call_count)} />
-          <StatCard icon={<AlertTriangle size={13} />} label="错误" value={String(session.error_count)}
-            accent={session.error_count > 0} />
-          <StatCard icon={<Zap size={13} />} label="Token"
-            value={formatTokenCount(session.total_input_tokens + session.total_output_tokens)} />
-        </div>
-      </div>
+        <section
+          className="flex flex-col border-t border-[var(--color-border-primary)]"
+          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)' }}
+        >
+          <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+            统计
+          </h3>
+          <div className="grid grid-cols-2" style={{ gap: 'var(--space-3)' }}>
+            <StatCard icon={<FileText size={13} aria-hidden="true" />} label="文件" value={String(session.file_count)} />
+            <StatCard icon={<Cpu size={13} aria-hidden="true" />} label="工具调用" value={String(session.tool_call_count)} />
+            <StatCard
+              icon={<AlertTriangle size={13} aria-hidden="true" />}
+              label="错误"
+              value={String(session.error_count)}
+              accent={session.error_count > 0}
+            />
+            <StatCard
+              icon={<Zap size={13} aria-hidden="true" />}
+              label="Tokens"
+              value={formatTokenCount(session.total_input_tokens + session.total_output_tokens)}
+            />
+          </div>
+        </section>
 
-      <SessionIdBlock id={session.session_id} />
+        <SessionIdBlock id={session.session_id} />
+      </div>
     </div>
   )
 }
@@ -66,10 +103,18 @@ function DetailRow({ icon, label, value, mono }: {
   mono?: boolean
 }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="text-[var(--color-text-muted)]">{icon}</span>
-      <span className="w-16 text-[var(--color-text-muted)]">{label}</span>
-      <span className={mono ? 'font-mono text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}>
+    <div className="flex items-center text-xs min-w-0" style={{ gap: 'var(--space-2)' }}>
+      <span className="shrink-0 text-[var(--color-text-muted)]">{icon}</span>
+      <span
+        className="shrink-0 text-[var(--color-text-muted)]"
+        style={{ minWidth: '40px' }}
+      >
+        {label}
+      </span>
+      <span
+        title={value}
+        className={`min-w-0 flex-1 truncate ${mono ? 'font-mono text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}`}
+      >
         {value}
       </span>
     </div>
@@ -83,12 +128,18 @@ function StatCard({ icon, label, value, accent }: {
   accent?: boolean
 }) {
   return (
-    <div className="p-2.5 rounded-lg bg-[var(--color-bg-secondary)]">
-      <div className="flex items-center gap-1.5 mb-0.5">
+    <div
+      className="min-w-0 rounded-lg bg-[var(--color-bg-secondary)]"
+      style={{ padding: 'var(--space-3)' }}
+    >
+      <div className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
         <span className={accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}>{icon}</span>
         <span className="text-xs text-[var(--color-text-muted)]">{label}</span>
       </div>
-      <span className={`text-sm font-semibold font-mono ${accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'}`}>
+      <span
+        title={value}
+        className={`block text-base font-semibold font-mono truncate ${accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'}`}
+      >
         {value}
       </span>
     </div>
@@ -106,30 +157,33 @@ function SessionIdBlock({ id }: { id: string }) {
   }
 
   return (
-    <div className="pt-3 border-t border-[var(--color-border-primary)]">
-      <div className="flex items-center justify-between mb-1.5">
-        <h4 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+    <section
+      className="flex flex-col border-t border-[var(--color-border-primary)]"
+      style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)' }}
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
           会话 ID
-        </h4>
-        <button onClick={handleCopy}
-          className="p-1 rounded active:opacity-60 text-[var(--color-text-muted)]"
-          title="复制">
-          {copied ? <Check size={12} /> : <Copy size={12} />}
+        </h3>
+        <button
+          onClick={handleCopy}
+          className="rounded active:opacity-60 text-[var(--color-text-muted)]
+            hover:bg-[var(--color-surface-hover)] focus-visible:ring-0 focus-ring"
+          style={{ padding: 'var(--space-1)' }}
+          title={copied ? '已复制' : '复制会话 ID'}
+          aria-label={copied ? '已复制会话 ID' : '复制会话 ID'}
+        >
+          {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
         </button>
       </div>
-      <code className="text-xs px-2.5 py-1.5 rounded-md block break-all font-mono
-        bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]">
+      <code
+        title={id}
+        className="text-xs break-all font-mono
+          bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+        style={{ paddingLeft: 'var(--space-3)', paddingRight: 'var(--space-3)', paddingTop: 'var(--space-2)', paddingBottom: 'var(--space-2)', borderRadius: '6px' }}
+      >
         {id}
       </code>
-    </div>
-  )
-}
-
-function Zap({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
+    </section>
   )
 }

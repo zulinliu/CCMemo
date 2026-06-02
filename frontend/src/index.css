@@ -44,10 +44,38 @@
   --color-timeline-file-bg: oklch(0.72 0.06 60 / 0.12);
   --color-timeline-command-bg: oklch(0.55 0.01 80 / 0.12);
   --color-timeline-error-bg: oklch(0.55 0.12 30 / 0.12);
+
+  /* Spacing scale — used for margin/padding/gap */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Radius scale */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* Control heights — single source of truth for all form control sizing */
+  --height-control-sm: 32px;   /* dense desktop */
+  --height-control-md: 36px;   /* default desktop */
+  --height-control-lg: 40px;
+  --height-control-xl: 44px;   /* primary mobile (touch target) */
+  --height-bar-sm: 48px;       /* desktop header */
+  --height-bar-lg: 56px;       /* mobile tab bar */
 }
 
 :root,
 [data-theme="light"] {
+  color-scheme: light;
   --color-bg-primary: var(--color-ivory-light);
   --color-bg-secondary: var(--color-ivory-medium);
   --color-bg-tertiary: var(--color-ivory-dark);
@@ -70,6 +98,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --color-bg-primary: var(--color-slate-dark);
   --color-bg-secondary: #1e1e1c;
   --color-bg-tertiary: #2a2a28;
@@ -83,9 +112,9 @@
   --color-border-focus: var(--color-accent-hover);
   --color-surface-hover: rgba(250, 249, 245, 0.05);
   --color-surface-active: rgba(250, 249, 245, 0.1);
-  --color-card-bg: #252523;
-  --color-card-border: rgba(250, 249, 245, 0.1);
-  --color-card-selected-bg: rgba(217, 119, 87, 0.12);
+  --color-card-bg: #2c2b29;
+  --color-card-border: rgba(250, 249, 245, 0.16);
+  --color-card-selected-bg: rgba(217, 119, 87, 0.14);
   --color-card-selected-border: var(--color-accent-hover);
   --shadow-sm: 0 2px 2px rgba(0,0,0,0.1), 0 4px 4px rgba(0,0,0,0.15), 0 16px 24px rgba(0,0,0,0.2);
   --shadow-lg: 0 4px 3px rgba(0,0,0,0.15), 0 34px 27px rgba(0,0,0,0.25), 0 63px 50px rgba(0,0,0,0.3);
@@ -155,4 +184,16 @@ button:active {
 .focus-ring:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-border-focus);
+}
+
+/* Honor reduced-motion: collapse all transitions/animations to a near-zero duration */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -50,7 +50,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           className="flex flex-col items-center"
           style={{ marginBottom: 'var(--space-8)', gap: 'var(--space-3)' }}
         >
@@ -86,7 +86,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <motion.form
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           onSubmit={handleSubmit}
           noValidate
           style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
@@ -186,7 +186,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
           className="flex items-center text-xs text-[var(--color-text-muted)]"
           style={{ marginTop: 'var(--space-7)', gap: 'var(--space-3)' }}
         >

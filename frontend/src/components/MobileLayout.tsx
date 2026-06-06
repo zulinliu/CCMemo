@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import type { Session } from '../lib/types'
 import { api } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
+import { statusColor } from '../lib/utils'
 import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
 import { Select } from './Select'
 import { BottomTabBar, type MobileTab } from './BottomTabBar'
-import { Sun, Moon, LogOut, Inbox } from 'lucide-react'
+import { Sun, Moon, LogOut, Inbox, Filter, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 
 const statusOptions = [
@@ -29,6 +30,27 @@ export function MobileLayout() {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [tab, setTab] = useState<MobileTab>('sessions')
   const sessionReqRef = useRef(0)
+
+  // Hash-based deep linking
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    if (hash) { setSelectedId(hash); setTab('timeline') }
+    const onHash = () => {
+      const h = window.location.hash.slice(1)
+      if (h && h !== selectedId) { setSelectedId(h); setTab('timeline') }
+      else if (!h) setSelectedId(null)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  useEffect(() => {
+    if (selectedId) {
+      window.history.replaceState(null, '', `#${selectedId}`)
+    } else {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [selectedId])
 
   useEffect(() => {
     api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(() => {})
@@ -64,6 +86,11 @@ export function MobileLayout() {
   const projectOptions = [
     { value: '', label: '全部项目' },
     ...projects.map(p => ({ value: p.id, label: p.name })),
+  ]
+
+  const activeFilters = [
+    ...(projectFilter ? [{ key: 'project' as const, label: projectOptions.find(o => o.value === projectFilter)?.label || projectFilter, clear: () => setProjectFilter('') }] : []),
+    ...(statusFilter ? [{ key: 'status' as const, label: statusOptions.find(o => o.value === statusFilter)?.label || statusFilter, clear: () => setStatusFilter('') }] : []),
   ]
 
   return (
@@ -147,6 +174,33 @@ export function MobileLayout() {
                   />
                 </div>
               </div>
+              {activeFilters.length > 0 && (
+                <div
+                  className="shrink-0 flex items-center flex-wrap"
+                  style={{ paddingLeft: 'var(--space-4)', paddingRight: 'var(--space-4)', gap: 'var(--space-2)', paddingBottom: 'var(--space-2)' }}
+                >
+                  <Filter size={12} className="text-[var(--color-text-muted)] shrink-0" aria-hidden="true" />
+                  {activeFilters.map(f => (
+                    <span
+                      key={f.key}
+                      className="inline-flex items-center text-xs rounded-md
+                        bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                      style={{ padding: '2px var(--space-2)', gap: 'var(--space-1)' }}
+                    >
+                      {f.label}
+                      <button
+                        onClick={f.clear}
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]
+                          focus-visible:ring-0 focus-ring rounded-sm"
+                        style={{ padding: '1px' }}
+                        aria-label={`移除筛选：${f.label}`}
+                      >
+                        <X size={10} aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex-1 overflow-hidden min-h-0">
                 <SessionList
                   onSelect={handleSelect}
@@ -169,7 +223,29 @@ export function MobileLayout() {
               className="h-full"
             >
               {selectedSession ? (
-                <Timeline session={selectedSession} />
+                <div className="flex flex-col h-full">
+                  <div
+                    className="shrink-0 flex items-center border-b border-[var(--color-border-primary)]"
+                    style={{
+                      paddingLeft: 'var(--space-4)',
+                      paddingRight: 'var(--space-4)',
+                      paddingTop: 'var(--space-2)',
+                      paddingBottom: 'var(--space-2)',
+                    }}
+                  >
+                    <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {selectedSession.auto_title}
+                    </span>
+                    <span
+                      className="shrink-0 ml-2 w-2 h-2 rounded-full"
+                      style={{ background: statusColor(selectedSession.status) }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div className="flex-1 overflow-hidden min-h-0">
+                    <Timeline session={selectedSession} />
+                  </div>
+                </div>
               ) : (
                 <EmptyState
                   icon={<Inbox size={24} aria-hidden="true" />}
@@ -188,10 +264,32 @@ export function MobileLayout() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="h-full overflow-y-auto"
+              className="h-full"
             >
               {selectedSession ? (
-                <SessionDetail session={selectedSession} />
+                <div className="flex flex-col h-full">
+                  <div
+                    className="shrink-0 flex items-center border-b border-[var(--color-border-primary)]"
+                    style={{
+                      paddingLeft: 'var(--space-4)',
+                      paddingRight: 'var(--space-4)',
+                      paddingTop: 'var(--space-2)',
+                      paddingBottom: 'var(--space-2)',
+                    }}
+                  >
+                    <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {selectedSession.auto_title}
+                    </span>
+                    <span
+                      className="shrink-0 ml-2 w-2 h-2 rounded-full"
+                      style={{ background: statusColor(selectedSession.status) }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    <SessionDetail session={selectedSession} />
+                  </div>
+                </div>
               ) : (
                 <EmptyState
                   icon={<Inbox size={24} aria-hidden="true" />}

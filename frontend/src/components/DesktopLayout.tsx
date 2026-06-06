@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../lib/types'
 import { api } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
+import { useIsTablet } from '../hooks/useMobile'
 import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { SessionDetail } from './SessionDetail'
 import { SearchBar } from './SearchBar'
 import { Select } from './Select'
-import { Activity, Layers, Sun, Moon, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { Activity, Layers, Sun, Moon, LogOut, PanelLeftClose, PanelLeftOpen, X, Filter } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 
 const statusOptions = [
@@ -20,6 +21,7 @@ const statusOptions = [
 
 export function DesktopLayout() {
   const { theme, toggle } = useTheme()
+  const isTablet = useIsTablet()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -29,6 +31,27 @@ export function DesktopLayout() {
   const [stats, setStats] = useState<{ session_count: number; project_count: number } | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const sessionReqRef = useRef(0)
+
+  // Hash-based deep linking: #session-id
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    if (hash) setSelectedId(hash)
+    const onHash = () => {
+      const h = window.location.hash.slice(1)
+      if (h && h !== selectedId) setSelectedId(h)
+      else if (!h) setSelectedId(null)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  useEffect(() => {
+    if (selectedId) {
+      window.history.replaceState(null, '', `#${selectedId}`)
+    } else {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }, [selectedId])
 
   useEffect(() => {
     api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(() => {})
@@ -56,6 +79,13 @@ export function DesktopLayout() {
     { value: '', label: '全部项目' },
     ...projects.map(p => ({ value: p.id, label: p.name })),
   ]
+
+  const activeFilters = [
+    ...(projectFilter ? [{ key: 'project' as const, label: projectOptions.find(o => o.value === projectFilter)?.label || projectFilter, clear: () => setProjectFilter('') }] : []),
+    ...(statusFilter ? [{ key: 'status' as const, label: statusOptions.find(o => o.value === statusFilter)?.label || statusFilter, clear: () => setStatusFilter('') }] : []),
+    ...(searchQuery ? [{ key: 'search' as const, label: `「${searchQuery.length > 8 ? searchQuery.slice(0, 8) + '…' : searchQuery}」`, clear: () => setSearchQuery('') }] : []),
+  ]
+  const hasFilters = activeFilters.length > 0
 
   const handleDeselect = useCallback(() => setSelectedId(null), [])
 
@@ -185,6 +215,34 @@ export function DesktopLayout() {
             </div>
           )}
 
+          {!sidebarCollapsed && hasFilters && (
+            <div
+              className="shrink-0 flex items-center flex-wrap border-b border-[var(--color-border-primary)]"
+              style={{ padding: 'var(--space-2) var(--space-3)', gap: 'var(--space-2)' }}
+            >
+              <Filter size={12} className="text-[var(--color-text-muted)] shrink-0" aria-hidden="true" />
+              {activeFilters.map(f => (
+                <span
+                  key={f.key}
+                  className="inline-flex items-center text-xs rounded-md
+                    bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                  style={{ padding: '2px var(--space-2)', gap: 'var(--space-1)' }}
+                >
+                  {f.label}
+                  <button
+                    onClick={f.clear}
+                    className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]
+                      focus-visible:ring-0 focus-ring rounded-sm"
+                    style={{ padding: '1px' }}
+                    aria-label={`移除筛选：${f.label}`}
+                  >
+                    <X size={10} aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           {!sidebarCollapsed && (
             <div className="flex-1 overflow-hidden min-h-0">
               <SessionList
@@ -265,13 +323,15 @@ export function DesktopLayout() {
                   <Timeline session={selectedSession} />
                 </div>
               </div>
-              {/* Detail column */}
-              <div
-                className="overflow-y-auto shrink-0 border-l border-[var(--color-border-primary)]"
-                style={{ width: 'var(--width-detail)' }}
-              >
-                <SessionDetail session={selectedSession} />
-              </div>
+              {/* Detail column — hidden on tablet for breathing room */}
+              {!isTablet && (
+                <div
+                  className="overflow-y-auto shrink-0 border-l border-[var(--color-border-primary)]"
+                  style={{ width: 'var(--width-detail)' }}
+                >
+                  <SessionDetail session={selectedSession} />
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div

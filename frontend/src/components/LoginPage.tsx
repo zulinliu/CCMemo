@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { Lock, LogIn } from 'lucide-react'
+import { motion } from 'motion/react'
 import { api } from '../lib/api'
 
 interface LoginPageProps {
@@ -45,30 +46,51 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       style={{ paddingLeft: 'var(--space-4)', paddingRight: 'var(--space-4)' }}
     >
       <div className="w-full max-w-sm">
-        <div
+        {/* Brand header */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
           className="flex flex-col items-center"
-          style={{
-            marginBottom: 'var(--space-7)',
-            gap: 'var(--space-3)',
-          }}
+          style={{ marginBottom: 'var(--space-8)', gap: 'var(--space-3)' }}
         >
+          {/* Stamp-style brand icon */}
           <div
-            className="rounded-2xl flex items-center justify-center bg-[var(--color-bg-secondary)]"
-            style={{ width: '64px', height: '64px' }}
+            className="flex items-center justify-center"
+            style={{ width: '56px', height: '56px' }}
             aria-hidden="true"
           >
-            <Lock size={28} className="text-[var(--color-accent)]" />
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: 'var(--cinnabar)',
+                boxShadow: '0 2px 8px rgba(194, 58, 46, 0.25)',
+              }}
+            >
+              <Lock size={18} className="text-white" />
+            </div>
           </div>
-          <h1
-            className="text-2xl font-bold text-[var(--color-text-primary)] text-center"
-            style={{ marginTop: 'var(--space-1)' }}
-          >
-            CCMemo
-          </h1>
-          <p className="text-sm text-[var(--color-text-muted)] text-center">请输入密码以继续</p>
-        </div>
 
-        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <h1
+            className="font-display text-3xl font-medium text-[var(--color-text-primary)] text-center"
+            style={{ letterSpacing: '-0.02em' }}
+          >
+            墨途
+          </h1>
+          <p className="text-sm text-[var(--color-text-muted)] text-center">
+            AI 编程会话的探索手账
+          </p>
+        </motion.div>
+
+        {/* Login form */}
+        <motion.form
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+          onSubmit={handleSubmit}
+          noValidate
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
+        >
           <div>
             <label
               htmlFor="ccmemo-password"
@@ -90,42 +112,56 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               disabled={loading}
               aria-invalid={error ? 'true' : 'false'}
               aria-describedby={error ? 'ccmemo-password-error' : undefined}
-              className="w-full text-sm rounded-lg outline-none
-                bg-[var(--color-bg-secondary)] border border-[var(--color-card-border)] text-[var(--color-text-primary)]
+              className="w-full text-sm outline-none
+                bg-transparent border-0 border-b-2
+                text-[var(--color-text-primary)]
                 placeholder:text-[var(--color-text-muted)]
-                focus:border-[var(--color-border-focus)] focus-visible:ring-0 focus-ring
+                focus:border-[var(--cinnabar)] focus:ring-0
+                transition-colors duration-200
                 disabled:opacity-50"
               style={{
                 height: 'var(--height-control-xl)',
-                paddingLeft: 'var(--space-4)',
-                paddingRight: 'var(--space-4)',
+                paddingBottom: 'var(--space-2)',
+                borderBottomColor: error ? 'var(--cinnabar)' : 'var(--color-border-secondary)',
               }}
             />
           </div>
 
           {error && (
-            <p
+            <motion.p
               id="ccmemo-password-error"
               ref={errorRef}
               tabIndex={-1}
               role="alert"
               aria-live="polite"
-              className="text-xs text-[var(--color-status-unrecoverable)]"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xs text-[var(--status-failed)]"
             >
               {error}
-            </p>
+            </motion.p>
           )}
 
-          <button
+          <motion.button
             type="submit"
             disabled={loading || !password.trim()}
-            className="w-full flex items-center justify-center rounded-lg font-medium text-sm text-white
-              bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)]
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="w-full flex items-center justify-center rounded-xl font-medium text-sm text-white
               transition-colors duration-150
               disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               height: 'var(--height-control-xl)',
               gap: 'var(--space-2)',
+              background: 'var(--cinnabar)',
+            }}
+            onMouseEnter={(e) => {
+              if (!(loading || !password.trim())) {
+                (e.target as HTMLElement).style.background = 'var(--cinnabar-hover)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.background = 'var(--cinnabar)'
             }}
           >
             {loading ? (
@@ -135,7 +171,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   style={{ width: '16px', height: '16px' }}
                   aria-hidden="true"
                 />
-                <span>正在登录…</span>
+                <span>正在登录...</span>
               </>
             ) : (
               <>
@@ -143,25 +179,21 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <span>登录</span>
               </>
             )}
-          </button>
-        </form>
+          </motion.button>
+        </motion.form>
 
-        <div
+        {/* Footer stitch-line */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
           className="flex items-center text-xs text-[var(--color-text-muted)]"
-          style={{ marginTop: 'var(--space-6)', gap: 'var(--space-3)' }}
+          style={{ marginTop: 'var(--space-7)', gap: 'var(--space-3)' }}
         >
-          <span
-            className="flex-1 bg-[var(--color-border-primary)]"
-            style={{ height: '1px' }}
-            aria-hidden="true"
-          />
-          <span>本机部署 · 数据不出本地</span>
-          <span
-            className="flex-1 bg-[var(--color-border-primary)]"
-            style={{ height: '1px' }}
-            aria-hidden="true"
-          />
-        </div>
+          <span className="flex-1 stitch-line" aria-hidden="true" />
+          <span>本机部署, 数据不出本地</span>
+          <span className="flex-1 stitch-line" aria-hidden="true" />
+        </motion.div>
       </div>
     </main>
   )

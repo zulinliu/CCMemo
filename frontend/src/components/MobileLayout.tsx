@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Session } from '../lib/types'
 import { api } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
@@ -9,6 +9,7 @@ import { SearchBar } from './SearchBar'
 import { Select } from './Select'
 import { BottomTabBar, type MobileTab } from './BottomTabBar'
 import { Sun, Moon, LogOut, Inbox } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 
 const statusOptions = [
   { value: '', label: '状态' },
@@ -27,6 +28,7 @@ export function MobileLayout() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [tab, setTab] = useState<MobileTab>('sessions')
+  const sessionReqRef = useRef(0)
 
   useEffect(() => {
     api.projects.list().then(p => setProjects(p.map(({ id, name }) => ({ id, name })))).catch(() => {})
@@ -34,7 +36,16 @@ export function MobileLayout() {
 
   useEffect(() => {
     if (selectedId) {
-      api.sessions.get(selectedId).then(setSelectedSession).catch(() => setSelectedSession(null))
+      const reqId = ++sessionReqRef.current
+      api.sessions.get(selectedId).then(session => {
+        if (reqId === sessionReqRef.current) {
+          setSelectedSession(session)
+        }
+      }).catch(() => {
+        if (reqId === sessionReqRef.current) {
+          setSelectedSession(null)
+        }
+      })
     } else {
       setSelectedSession(null)
     }
@@ -68,7 +79,7 @@ export function MobileLayout() {
           paddingRight: 'var(--space-4)',
         }}
       >
-        <span className="text-base font-semibold text-[var(--color-text-primary)]">CCMemo</span>
+        <span className="font-display text-base font-medium text-[var(--color-text-primary)]">墨途</span>
         <div className="flex items-center" style={{ gap: 'var(--space-1)' }}>
           <button
             onClick={toggle}
@@ -95,76 +106,103 @@ export function MobileLayout() {
 
       {/* Content */}
       <main className="flex-1 overflow-hidden min-h-0">
-        {tab === 'sessions' && (
-          <div className="flex flex-col h-full">
-            <div
-              className="shrink-0 border-b border-[var(--color-border-primary)] flex flex-col"
-              style={{
-                paddingLeft: 'var(--space-4)',
-                paddingRight: 'var(--space-4)',
-                paddingTop: 'var(--space-4)',
-                paddingBottom: 'var(--space-3)',
-                gap: 'var(--space-3)',
-              }}
+        <AnimatePresence mode="wait">
+          {tab === 'sessions' && (
+            <motion.div
+              key="sessions"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex flex-col h-full"
             >
-              <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话…" />
-              <div className="flex" style={{ gap: 'var(--space-2)' }}>
-                <Select
-                  className="flex-1 min-w-0"
-                  value={projectFilter}
-                  onChange={setProjectFilter}
-                  options={projectOptions}
-                  ariaLabel="按项目筛选会话"
-                  size="lg"
-                />
-                <Select
-                  className="shrink-0"
-                  style={{ minWidth: '104px' }}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  options={statusOptions}
-                  ariaLabel="按状态筛选会话"
-                  size="lg"
+              <div
+                className="shrink-0 border-b border-[var(--color-border-primary)] flex flex-col"
+                style={{
+                  paddingLeft: 'var(--space-4)',
+                  paddingRight: 'var(--space-4)',
+                  paddingTop: 'var(--space-4)',
+                  paddingBottom: 'var(--space-3)',
+                  gap: 'var(--space-3)',
+                }}
+              >
+                <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="搜索会话..." />
+                <div className="flex" style={{ gap: 'var(--space-2)' }}>
+                  <Select
+                    className="flex-1 min-w-0"
+                    value={projectFilter}
+                    onChange={setProjectFilter}
+                    options={projectOptions}
+                    ariaLabel="按项目筛选会话"
+                    size="lg"
+                  />
+                  <Select
+                    className="shrink-0"
+                    style={{ minWidth: '104px' }}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    options={statusOptions}
+                    ariaLabel="按状态筛选会话"
+                    size="lg"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden min-h-0">
+                <SessionList
+                  onSelect={handleSelect}
+                  selectedId={selectedId ?? undefined}
+                  searchQuery={searchQuery || undefined}
+                  projectId={projectFilter || undefined}
+                  statusFilter={statusFilter || undefined}
                 />
               </div>
-            </div>
-            <div className="flex-1 overflow-hidden min-h-0">
-              <SessionList
-                onSelect={handleSelect}
-                selectedId={selectedId ?? undefined}
-                searchQuery={searchQuery || undefined}
-                projectId={projectFilter || undefined}
-                statusFilter={statusFilter || undefined}
-              />
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
 
-        {tab === 'timeline' && (
-          selectedSession ? (
-            <Timeline session={selectedSession} />
-          ) : (
-            <EmptyState
-              icon={<Inbox size={24} aria-hidden="true" />}
-              title="还没有选中会话"
-              message="在「会话」标签中选择一个会话，查看其时间线事件"
-            />
-          )
-        )}
+          {tab === 'timeline' && (
+            <motion.div
+              key="timeline"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="h-full"
+            >
+              {selectedSession ? (
+                <Timeline session={selectedSession} />
+              ) : (
+                <EmptyState
+                  icon={<Inbox size={24} aria-hidden="true" />}
+                  title="还没有选中会话"
+                  message="在「目录」标签中选择一个会话，查看其时间线事件"
+                  action={{ label: '前往目录', onClick: () => setTab('sessions') }}
+                />
+              )}
+            </motion.div>
+          )}
 
-        {tab === 'detail' && (
-          selectedSession ? (
-            <div className="h-full overflow-y-auto">
-              <SessionDetail session={selectedSession} />
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Inbox size={24} aria-hidden="true" />}
-              title="还没有选中会话"
-              message="在「会话」标签中选择一个会话，查看其详情信息"
-            />
-          )
-        )}
+          {tab === 'detail' && (
+            <motion.div
+              key="detail"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="h-full overflow-y-auto"
+            >
+              {selectedSession ? (
+                <SessionDetail session={selectedSession} />
+              ) : (
+                <EmptyState
+                  icon={<Inbox size={24} aria-hidden="true" />}
+                  title="还没有选中会话"
+                  message="在「目录」标签中选择一个会话，查看其详情信息"
+                  action={{ label: '前往目录', onClick: () => setTab('sessions') }}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Bottom Tab Bar */}
@@ -173,7 +211,12 @@ export function MobileLayout() {
   )
 }
 
-function EmptyState({ icon, title, message }: { icon: React.ReactNode; title: string; message: string }) {
+function EmptyState({ icon, title, message, action }: {
+  icon: React.ReactNode
+  title: string
+  message: string
+  action?: { label: string; onClick: () => void }
+}) {
   return (
     <div className="flex items-center justify-center h-full">
       <div
@@ -186,19 +229,30 @@ function EmptyState({ icon, title, message }: { icon: React.ReactNode; title: st
         }}
       >
         <div
-          className="rounded-2xl flex items-center justify-center bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]"
+          className="flex items-center justify-center text-[var(--color-text-muted)]"
           style={{ width: '64px', height: '64px' }}
           aria-hidden="true"
         >
           {icon}
         </div>
         <h2
-          className="text-base font-semibold text-[var(--color-text-primary)] text-center"
+          className="font-display text-base font-medium text-[var(--color-text-primary)] text-center"
           style={{ marginTop: 'var(--space-1)' }}
         >
           {title}
         </h2>
         <p className="text-sm text-center text-[var(--color-text-muted)]">{message}</p>
+        {action && (
+          <button
+            onClick={action.onClick}
+            className="mt-1 text-sm font-medium rounded-lg transition-colors duration-200
+              text-[var(--cinnabar)] hover:bg-[var(--cinnabar-ghost)]
+              focus-visible:ring-0 focus-ring"
+            style={{ padding: 'var(--space-2) var(--space-4)' }}
+          >
+            {action.label}
+          </button>
+        )}
       </div>
     </div>
   )

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Session, PaginatedResult } from '../lib/types'
 import { api } from '../lib/api'
 import { formatRelativeTime, truncate, statusColor, formatTokenCount } from '../lib/utils'
-import { Clock, GitBranch, Cpu, AlertTriangle, Copy, Check, Terminal } from 'lucide-react'
+import { Clock, GitBranch, Cpu, AlertTriangle, Copy, Check, Terminal, Search } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 
 interface SessionListProps {
   onSelect: (id: string) => void
@@ -86,7 +87,7 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
       >
         <AlertTriangle
           size={20}
-          className="text-[var(--color-accent)]"
+          className="text-[var(--cinnabar)]"
           style={{ marginBottom: 'var(--space-3)' }}
           aria-hidden="true"
         />
@@ -102,6 +103,9 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
   }
 
   if (sessions.length === 0 && !loading) {
+    if (searchQuery) {
+      return <SearchEmptyState query={searchQuery} />
+    }
     return <EmptyState />
   }
 
@@ -116,41 +120,51 @@ export function SessionList({ onSelect, selectedId, searchQuery, projectId, stat
         }}
       >
         <div className="flex flex-col" style={{ gap: 'var(--space-3)' }}>
-        {sessions.map(session => (
-          <SessionCard
-            key={session.session_id}
-            session={session}
-            selected={selectedId === session.session_id}
-            onClick={() => onSelect(session.session_id)}
-          />
-        ))}
-        {loading && (
-          <div
-            className="flex justify-center"
-            style={{ paddingTop: 'var(--space-4)', paddingBottom: 'var(--space-4)' }}
-            role="status"
-            aria-live="polite"
-          >
+          <AnimatePresence mode="popLayout">
+            {sessions.map((session, i) => (
+              <motion.div
+                key={session.session_id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.2, ease: "easeOut", delay: Math.min(i * 0.04, 0.4) }}
+                layout
+              >
+                <SessionCard
+                  session={session}
+                  selected={selectedId === session.session_id}
+                  onClick={() => onSelect(session.session_id)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {loading && (
             <div
-              className="border-2 rounded-full animate-spin border-[var(--color-border-secondary)] border-t-[var(--color-accent)]"
-              style={{ width: '20px', height: '20px' }}
-              aria-label="正在加载会话"
-            />
-          </div>
-        )}
-        {hasMore && !loading && (
-          <button
-            onClick={loadMore}
-            className="w-full text-xs font-medium rounded-lg transition-colors duration-200
-              text-[var(--color-text-tertiary)]
-              hover:bg-[var(--color-surface-hover)] active:opacity-60
-              focus-visible:ring-0 focus-ring"
-            style={{ paddingTop: 'var(--space-3)', paddingBottom: 'var(--space-3)' }}
-            aria-label="加载更多会话"
-          >
-            加载更多…
-          </button>
-        )}
+              className="flex justify-center"
+              style={{ paddingTop: 'var(--space-4)', paddingBottom: 'var(--space-4)' }}
+              role="status"
+              aria-live="polite"
+            >
+              <div
+                className="border-2 rounded-full animate-spin border-[var(--color-border-secondary)] border-t-[var(--cinnabar)]"
+                style={{ width: '20px', height: '20px' }}
+                aria-label="正在加载会话"
+              />
+            </div>
+          )}
+          {hasMore && !loading && (
+            <button
+              onClick={loadMore}
+              className="w-full text-xs font-medium rounded-lg transition-colors duration-200
+                text-[var(--color-text-tertiary)]
+                hover:bg-[var(--color-surface-hover)] active:opacity-60
+                focus-visible:ring-0 focus-ring"
+              style={{ paddingTop: 'var(--space-3)', paddingBottom: 'var(--space-3)' }}
+              aria-label="加载更多会话"
+            >
+              加载更多...
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -181,7 +195,7 @@ function SessionCard({ session, selected, onClick }: {
     metrics.push(
       <span
         key="err"
-        className="inline-flex items-center text-[var(--color-accent)]"
+        className="inline-flex items-center text-[var(--cinnabar)]"
         style={{ gap: 'var(--space-1)' }}
       >
         <AlertTriangle size={11} aria-hidden="true" />
@@ -197,19 +211,24 @@ function SessionCard({ session, selected, onClick }: {
   }
 
   return (
-    <button
+    <motion.button
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${title}，状态 ${statusName}`}
-      className={`w-full text-left rounded-xl transition-colors duration-200 flex flex-col
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className={`w-full text-left rounded-xl flex flex-col
         border focus-visible:ring-0 focus-ring
         ${selected
           ? 'bg-[var(--color-card-selected-bg)] border-[var(--color-card-selected-border)]'
-          : 'bg-[var(--color-card-bg)] border-[var(--color-card-border)] hover:bg-[var(--color-surface-hover)] active:bg-[var(--color-surface-active)]'
+          : 'bg-[var(--color-card-bg)] border-[var(--color-card-border)] hover:bg-[var(--color-surface-hover)]'
         }`}
-      style={{ padding: 'var(--space-4)' }}
+      style={{
+        padding: 'var(--space-4)',
+        boxShadow: selected ? 'var(--shadow-card-selected)' : 'var(--shadow-card)',
+      }}
     >
-      {/* Title — primary content */}
+      {/* Title */}
       <p
         className="text-sm font-semibold leading-snug line-clamp-2 text-[var(--color-text-primary)]"
         style={{ marginBottom: 'var(--space-3)' }}
@@ -217,20 +236,20 @@ function SessionCard({ session, selected, onClick }: {
         {title}
       </p>
 
-      {/* Group 1: status + time + branch (semantic identifiers) */}
+      {/* Status + time + branch */}
       <div
         className="flex items-center text-xs min-w-0 text-[var(--color-text-secondary)]"
         style={{ gap: 'var(--space-2)' }}
       >
         <span className="flex items-center shrink-0" style={{ gap: 'var(--space-1)' }}>
           <span
-            className="w-1.5 h-1.5 rounded-full shrink-0"
+            className="w-2 h-2 rounded-full shrink-0"
             style={{ background: statusColor(session.status) }}
             aria-hidden="true"
           />
           <span className="font-medium">{statusName}</span>
         </span>
-        <span className="text-[var(--color-text-muted)]" aria-hidden="true">·</span>
+        <span className="text-[var(--color-text-muted)]" aria-hidden="true">&middot;</span>
         <span className="shrink-0 text-[var(--color-text-tertiary)]">{formatRelativeTime(session.started_at)}</span>
         {session.branch && (
           <span
@@ -244,16 +263,16 @@ function SessionCard({ session, selected, onClick }: {
         )}
       </div>
 
-      {/* Hairline separator */}
+      {/* Stitch-line separator */}
       {metrics.length > 0 && (
-        <div
-          className="border-t border-[var(--color-border-primary)]"
+        <hr
+          className="stitch-line"
           style={{ marginBlock: 'var(--space-3)' }}
           aria-hidden="true"
         />
       )}
 
-      {/* Group 2: metrics (quantitative) */}
+      {/* Metrics */}
       {metrics.length > 0 && (
         <div
           className="flex items-center flex-wrap text-xs text-[var(--color-text-muted)]"
@@ -262,7 +281,7 @@ function SessionCard({ session, selected, onClick }: {
           {metrics}
         </div>
       )}
-    </button>
+    </motion.button>
   )
 }
 
@@ -278,28 +297,60 @@ function EmptyState() {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 bg-[var(--color-bg-tertiary)]">
-        <Clock size={24} className="text-[var(--color-text-muted)]" aria-hidden="true" />
+      <div
+        className="flex items-center justify-center"
+        style={{ width: '64px', height: '64px', marginBottom: 'var(--space-5)' }}
+        aria-hidden="true"
+      >
+        <Clock size={28} className="text-[var(--color-text-muted)]" />
       </div>
-      <p className="text-sm font-medium mb-1 text-[var(--color-text-secondary)]">还没有会话记录</p>
-      <p className="text-xs mb-4 max-w-xs text-[var(--color-text-muted)]">
+      <p
+        className="font-display text-lg font-medium mb-1 text-[var(--color-text-primary)]"
+      >
+        尚无行纪
+      </p>
+      <p className="text-sm mb-5 max-w-xs text-[var(--color-text-muted)]">
         在终端运行下方命令扫描并索引本机的 Claude Code 会话
       </p>
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md
-        bg-[var(--color-bg-tertiary)] border border-[var(--color-card-border)]">
+      <div
+        className="inline-flex items-center rounded-lg
+          bg-[var(--color-bg-tertiary)] border border-dashed border-[var(--color-border-secondary)]"
+        style={{ gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)' }}
+      >
         <Terminal size={12} className="text-[var(--color-text-muted)] shrink-0" aria-hidden="true" />
         <code className="font-mono text-xs text-[var(--color-text-primary)]">ccmemo scan</code>
         <button
           onClick={handleCopy}
-          className="ml-1 p-0.5 rounded text-[var(--color-text-muted)]
+          className="ml-1 rounded text-[var(--color-text-muted)]
             hover:bg-[var(--color-surface-hover)] focus-visible:ring-0 focus-ring
             active:opacity-60"
+          style={{ padding: '2px' }}
           title={copied ? '已复制' : '复制命令'}
           aria-label={copied ? '已复制 ccmemo scan 命令' : '复制 ccmemo scan 命令'}
         >
           {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
         </button>
       </div>
+    </div>
+  )
+}
+
+function SearchEmptyState({ query }: { query: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center" role="status">
+      <div
+        className="flex items-center justify-center text-[var(--color-text-muted)]"
+        style={{ width: '64px', height: '64px', marginBottom: 'var(--space-5)' }}
+        aria-hidden="true"
+      >
+        <Search size={28} />
+      </div>
+      <p className="font-display text-lg font-medium mb-1 text-[var(--color-text-primary)]">
+        未找到匹配的行纪
+      </p>
+      <p className="text-sm max-w-xs text-[var(--color-text-muted)]">
+        没有与「{query}」相关的会话。试试其他关键词，或缩短搜索词。
+      </p>
     </div>
   )
 }

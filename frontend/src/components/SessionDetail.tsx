@@ -2,6 +2,7 @@ import type { Session } from '../lib/types'
 import { formatDate, statusColor, statusBgColor, formatTokenCount } from '../lib/utils'
 import { GitBranch, Clock, Cpu, FileText, AlertTriangle, Monitor, Copy, Check, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { motion } from 'motion/react'
 
 const statusLabel: Record<string, string> = {
   active: '进行中',
@@ -25,9 +26,10 @@ export function SessionDetail({ session }: SessionDetailProps) {
       }}
     >
       <div className="flex flex-col" style={{ gap: 'var(--space-5)' }}>
+        {/* Header */}
         <header>
           <h2
-            className="text-base font-semibold leading-snug break-words text-[var(--color-text-primary)]"
+            className="font-display text-base font-medium leading-snug break-words text-[var(--color-text-primary)]"
             style={{ marginBottom: 'var(--space-3)' }}
           >
             {session.auto_title}
@@ -56,9 +58,10 @@ export function SessionDetail({ session }: SessionDetailProps) {
           </div>
         </header>
 
+        {/* Detail rows */}
         <section
-          className="flex flex-col border-t border-[var(--color-border-primary)]"
-          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-2)' }}
+          className="flex flex-col"
+          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-2)', borderTop: '1px solid var(--color-border-primary)' }}
         >
           <DetailRow icon={<Clock size={13} aria-hidden="true" />} label="开始" value={formatDate(session.started_at)} />
           {session.ended_at && <DetailRow icon={<Clock size={13} aria-hidden="true" />} label="结束" value={formatDate(session.ended_at)} />}
@@ -66,11 +69,12 @@ export function SessionDetail({ session }: SessionDetailProps) {
           {session.model && <DetailRow icon={<Monitor size={13} aria-hidden="true" />} label="模型" value={session.model} />}
         </section>
 
+        {/* Stats */}
         <section
-          className="flex flex-col border-t border-[var(--color-border-primary)]"
-          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)' }}
+          className="flex flex-col"
+          style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border-primary)' }}
         >
-          <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+          <h3 className="text-xs font-medium text-[var(--color-text-secondary)]">
             统计
           </h3>
           <div className="grid grid-cols-2" style={{ gap: 'var(--space-3)' }}>
@@ -90,6 +94,7 @@ export function SessionDetail({ session }: SessionDetailProps) {
           </div>
         </section>
 
+        {/* Session ID */}
         <SessionIdBlock id={session.session_id} />
       </div>
     </div>
@@ -129,16 +134,19 @@ function StatCard({ icon, label, value, accent }: {
 }) {
   return (
     <div
-      className="min-w-0 rounded-lg bg-[var(--color-bg-secondary)]"
-      style={{ padding: 'var(--space-3)' }}
+      className="min-w-0 rounded-xl bg-[var(--color-bg-secondary)]"
+      style={{
+        padding: 'var(--space-3)',
+        borderTop: accent ? '2px solid var(--cinnabar)' : '2px solid transparent',
+      }}
     >
       <div className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-        <span className={accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-muted)]'}>{icon}</span>
+        <span className={accent ? 'text-[var(--cinnabar)]' : 'text-[var(--color-text-muted)]'}>{icon}</span>
         <span className="text-xs text-[var(--color-text-muted)]">{label}</span>
       </div>
       <span
         title={value}
-        className={`block text-base font-semibold font-mono truncate ${accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-primary)]'}`}
+        className={`block text-base font-semibold font-mono truncate ${accent ? 'text-[var(--cinnabar)]' : 'text-[var(--color-text-primary)]'}`}
       >
         {value}
       </span>
@@ -158,29 +166,39 @@ function SessionIdBlock({ id }: { id: string }) {
 
   return (
     <section
-      className="flex flex-col border-t border-[var(--color-border-primary)]"
-      style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)' }}
+      className="flex flex-col"
+      style={{ paddingTop: 'var(--space-4)', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border-primary)' }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+        <h3 className="text-xs font-medium text-[var(--color-text-secondary)]">
           会话 ID
         </h3>
-        <button
+        <motion.button
           onClick={handleCopy}
-          className="rounded active:opacity-60 text-[var(--color-text-muted)]
+          whileTap={{ scale: 0.9 }}
+          className="rounded text-[var(--color-text-muted)]
             hover:bg-[var(--color-surface-hover)] focus-visible:ring-0 focus-ring"
           style={{ padding: 'var(--space-1)' }}
           title={copied ? '已复制' : '复制会话 ID'}
           aria-label={copied ? '已复制会话 ID' : '复制会话 ID'}
         >
-          {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
-        </button>
+          {copied
+            ? <Check size={12} className="text-[var(--cinnabar)]" aria-hidden="true" />
+            : <Copy size={12} aria-hidden="true" />}
+        </motion.button>
       </div>
       <code
         title={id}
         className="text-xs break-all font-mono
-          bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
-        style={{ paddingLeft: 'var(--space-3)', paddingRight: 'var(--space-3)', paddingTop: 'var(--space-2)', paddingBottom: 'var(--space-2)', borderRadius: '6px' }}
+          bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]
+          border border-dashed border-[var(--color-border-secondary)]"
+        style={{
+          paddingLeft: 'var(--space-3)',
+          paddingRight: 'var(--space-3)',
+          paddingTop: 'var(--space-2)',
+          paddingBottom: 'var(--space-2)',
+          borderRadius: 'var(--radius-lg)',
+        }}
       >
         {id}
       </code>

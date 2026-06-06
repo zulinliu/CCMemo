@@ -42,44 +42,44 @@ export function formatTokenCount(n: number): string {
 
 export function statusColor(status: string): string {
   switch (status) {
-    case 'active': return 'var(--color-status-active)'
-    case 'completed': return 'var(--color-status-completed)'
-    case 'interrupted': return 'var(--color-status-interrupted)'
-    case 'unrecoverable': return 'var(--color-status-unrecoverable)'
+    case 'active': return 'var(--status-active)'
+    case 'completed': return 'var(--status-completed)'
+    case 'interrupted': return 'var(--status-interrupted)'
+    case 'unrecoverable': return 'var(--status-failed)'
     default: return 'var(--color-text-muted)'
   }
 }
 
 export function statusBgColor(status: string): string {
   switch (status) {
-    case 'active': return 'var(--color-status-active-bg)'
-    case 'completed': return 'var(--color-status-completed-bg)'
-    case 'interrupted': return 'var(--color-status-interrupted-bg)'
-    case 'unrecoverable': return 'var(--color-status-unrecoverable-bg)'
+    case 'active': return 'var(--status-active-bg)'
+    case 'completed': return 'var(--status-completed-bg)'
+    case 'interrupted': return 'var(--status-interrupted-bg)'
+    case 'unrecoverable': return 'var(--status-failed-bg)'
     default: return 'var(--color-surface-hover)'
   }
 }
 
 export function eventTypeColor(type: string): string {
   switch (type) {
-    case 'user': return 'var(--color-timeline-user)'
-    case 'assistant': return 'var(--color-timeline-ai)'
+    case 'user': return 'var(--timeline-user)'
+    case 'assistant': return 'var(--timeline-ai)'
     case 'tool_use':
-    case 'tool_result': return 'var(--color-timeline-file)'
-    case 'system': return 'var(--color-timeline-command)'
-    case 'error': return 'var(--color-timeline-error)'
+    case 'tool_result': return 'var(--timeline-file)'
+    case 'system': return 'var(--timeline-command)'
+    case 'error': return 'var(--timeline-error)'
     default: return 'var(--color-text-muted)'
   }
 }
 
 export function eventTypeBg(type: string): string {
   switch (type) {
-    case 'user': return 'var(--color-timeline-user-bg)'
-    case 'assistant': return 'var(--color-timeline-ai-bg)'
+    case 'user': return 'var(--timeline-user-bg)'
+    case 'assistant': return 'var(--timeline-ai-bg)'
     case 'tool_use':
-    case 'tool_result': return 'var(--color-timeline-file-bg)'
-    case 'system': return 'var(--color-timeline-command-bg)'
-    case 'error': return 'var(--color-timeline-error-bg)'
+    case 'tool_result': return 'var(--timeline-file-bg)'
+    case 'system': return 'var(--timeline-command-bg)'
+    case 'error': return 'var(--timeline-error-bg)'
     default: return 'var(--color-surface-hover)'
   }
 }

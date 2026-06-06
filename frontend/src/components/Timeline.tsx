@@ -3,6 +3,7 @@ import type { TimelineEvent, Session } from '../lib/types'
 import { api } from '../lib/api'
 import { formatDate, eventTypeColor, eventTypeBg, eventTypeLabel, truncate } from '../lib/utils'
 import { User, Bot, Terminal, AlertCircle, Zap, ChevronDown, RefreshCw } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
 
 interface TimelineProps {
   session: Session
@@ -58,7 +59,7 @@ export function Timeline({ session }: TimelineProps) {
       >
         <AlertCircle
           size={24}
-          className="text-[var(--color-accent)]"
+          className="text-[var(--cinnabar)]"
           style={{ marginBottom: 'var(--space-3)' }}
           aria-hidden="true"
         />
@@ -94,16 +95,43 @@ export function Timeline({ session }: TimelineProps) {
     <div ref={containerRef} className="h-full overflow-y-auto">
       <div
         style={{
-          paddingLeft: 'var(--space-3)',
-          paddingRight: 'var(--space-3)',
-          paddingTop: 'var(--space-3)',
+          paddingLeft: 'var(--space-4)',
+          paddingRight: 'var(--space-4)',
+          paddingTop: 'var(--space-4)',
           paddingBottom: 'var(--space-7)',
         }}
       >
-        <div className="flex flex-col" style={{ gap: 'var(--space-1)' }}>
-          {events.map(event => (
-            <TimelineNode key={event.id} event={event} />
-          ))}
+        {/* Vertical thread + event nodes */}
+        <div className="relative">
+          {/* The thread: vertical dashed line */}
+          <div
+            className="absolute top-0 bottom-0"
+            style={{
+              left: '15px',
+              width: '2px',
+              backgroundImage: `repeating-linear-gradient(
+                to bottom,
+                var(--color-border-secondary) 0px,
+                var(--color-border-secondary) 4px,
+                transparent 4px,
+                transparent 8px
+              )`,
+            }}
+            aria-hidden="true"
+          />
+
+          <div className="flex flex-col" style={{ gap: 'var(--space-2)' }}>
+            <AnimatePresence mode="popLayout">
+              {events.map((event, i) => (
+                <TimelineNode
+                  key={event.id}
+                  event={event}
+                  index={i}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+
           {loading && (
             <div
               className="flex justify-center"
@@ -113,7 +141,7 @@ export function Timeline({ session }: TimelineProps) {
             >
               <div
                 className="border-2 rounded-full animate-spin
-                  border-[var(--color-border-secondary)] border-t-[var(--color-accent)]"
+                  border-[var(--color-border-secondary)] border-t-[var(--cinnabar)]"
                 style={{ width: '16px', height: '16px' }}
                 aria-label="正在加载事件"
               />
@@ -126,10 +154,10 @@ export function Timeline({ session }: TimelineProps) {
                 text-[var(--color-text-tertiary)]
                 hover:bg-[var(--color-surface-hover)] active:opacity-60
                 transition-colors duration-200 focus-visible:ring-0 focus-ring"
-              style={{ paddingTop: 'var(--space-3)', paddingBottom: 'var(--space-3)' }}
+              style={{ paddingTop: 'var(--space-3)', paddingBottom: 'var(--space-3)', marginTop: 'var(--space-2)' }}
               aria-label="加载更多事件"
             >
-              加载更多事件…
+              加载更多事件...
             </button>
           )}
         </div>
@@ -138,7 +166,7 @@ export function Timeline({ session }: TimelineProps) {
   )
 }
 
-function TimelineNode({ event }: { event: TimelineEvent }) {
+function TimelineNode({ event, index }: { event: TimelineEvent; index: number }) {
   const [expanded, setExpanded] = useState(false)
   const color = eventTypeColor(event.event_type)
   const bgColor = eventTypeBg(event.event_type)
@@ -146,26 +174,47 @@ function TimelineNode({ event }: { event: TimelineEvent }) {
   const hasLongPreview = !!event.preview && event.preview.length > PREVIEW_COLLAPSED
 
   return (
-    <button
-      onClick={() => setExpanded(!expanded)}
-      aria-expanded={hasLongPreview ? expanded : undefined}
-      className="w-full text-left rounded-lg flex
-        transition-colors duration-150
-        hover:bg-[var(--color-surface-hover)]
-        active:bg-[var(--color-surface-active)]
-        focus-visible:ring-0 focus-ring"
-      style={{ padding: 'var(--space-3)', gap: 'var(--space-3)' }}
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut", delay: Math.min(index * 0.03, 0.6) }}
+      className="relative flex"
+      style={{ gap: 'var(--space-3)', paddingLeft: '0', minHeight: '40px' }}
     >
-      <div className="flex flex-col items-center pt-0.5 shrink-0">
+      {/* Node stamp on the thread */}
+      <div
+        className="shrink-0 flex items-start pt-2"
+        style={{ width: '32px', justifyContent: 'center' }}
+      >
         <div
-          className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
-          style={{ background: bgColor, color }}
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+          style={{ background: bgColor, color, boxShadow: `0 0 0 2px var(--color-bg-primary)` }}
           aria-hidden="true"
         >
           {icon}
         </div>
       </div>
-      <div className="flex-1 min-w-0">
+
+      {/* Content */}
+      <div
+        className="flex-1 min-w-0 rounded-lg
+          hover:bg-[var(--color-surface-hover)]
+          transition-colors duration-150"
+        style={{
+          padding: 'var(--space-3)',
+          cursor: hasLongPreview ? 'pointer' : 'default',
+        }}
+        onClick={() => hasLongPreview && setExpanded(!expanded)}
+        role={hasLongPreview ? 'button' : undefined}
+        tabIndex={hasLongPreview ? 0 : undefined}
+        aria-expanded={hasLongPreview ? expanded : undefined}
+        onKeyDown={(e) => {
+          if (hasLongPreview && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            setExpanded(!expanded)
+          }
+        }}
+      >
         <div className="flex items-center" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
           <span className="text-xs font-semibold" style={{ color }}>
             {eventTypeLabel(event.event_type)}
@@ -179,27 +228,28 @@ function TimelineNode({ event }: { event: TimelineEvent }) {
             {hasLongPreview && !expanded ? truncate(event.preview, PREVIEW_COLLAPSED) : event.preview}
           </p>
         )}
-        <span
-          className="text-xs block text-[var(--color-text-muted)]"
-          style={{ marginTop: 'var(--space-2)' }}
-        >
-          {formatDate(event.timestamp)}
-        </span>
+        <div className="flex items-center" style={{ gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {formatDate(event.timestamp)}
+          </span>
+          {hasLongPreview && (
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-[var(--color-text-muted)]"
+              aria-hidden="true"
+            >
+              <ChevronDown size={12} />
+            </motion.span>
+          )}
+        </div>
       </div>
-      {hasLongPreview && (
-        <ChevronDown
-          size={14}
-          aria-hidden="true"
-          className={`shrink-0 self-center text-[var(--color-text-muted)] transition-transform duration-200
-            ${expanded ? 'rotate-180' : ''}`}
-        />
-      )}
-    </button>
+    </motion.div>
   )
 }
 
 function eventIcon(type: string) {
-  const size = 13
+  const size = 14
   switch (type) {
     case 'user': return <User size={size} aria-hidden="true" />
     case 'assistant': return <Bot size={size} aria-hidden="true" />

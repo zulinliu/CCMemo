@@ -67,22 +67,23 @@ export function Select({
   const chevronSize = size === 'sm' ? 12 : 14
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (!open) {
         setOpen(true)
         setActiveIndex(Math.max(0, options.findIndex(o => o.value === value)))
       } else {
-        const next = Math.min(options.length - 1, activeIndex + 1)
-        setActiveIndex(next)
+        setActiveIndex(prev => Math.min(options.length - 1, prev + 1))
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      const prev = Math.max(0, activeIndex - 1)
-      setActiveIndex(prev)
+      if (open) setActiveIndex(prev => Math.max(0, prev - 1))
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      if (open && activeIndex >= 0) {
+      if (!open) {
+        setOpen(true)
+        setActiveIndex(Math.max(0, options.findIndex(o => o.value === value)))
+      } else if (activeIndex >= 0) {
         onChange(options[activeIndex].value)
         close()
         triggerRef.current?.focus()
@@ -148,7 +149,7 @@ export function Select({
             borderRadius: 'var(--radius-lg)',
             padding: 'var(--space-1)',
             maxHeight: '320px',
-            boxShadow: 'var(--shadow-lg)',
+            boxShadow: 'var(--shadow-elevated)',
           }}
         >
           {options.map((opt, i) => {

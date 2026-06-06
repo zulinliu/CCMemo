@@ -1,0 +1,38 @@
+/target
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.orig
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+frontend/vite.config.ts.timestamp-*
+frontend/vite.config.js.timestamp-*
+
+# Root-level dev tooling (mock backend deps)
+node_modules/
+package-lock.json
+
+# Dev screenshots and debug helpers (debug-only, never commit)
+/screenshot*.ps1
+/review-*.png
+/final-*.png
+/mobile-v*-*.png
+/smoke-*.png
+/capture*.js
+/mobile-v*.js
+/smoke.js
+/verify-*.mjs

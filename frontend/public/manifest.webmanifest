@@ -1,0 +1,24 @@
+{
+  "name": "墨途 · AI 编程行纪",
+  "short_name": "墨途",
+  "description": "搜索、检索并复用 Claude Code 历史会话与时间线事件",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#c23a2e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

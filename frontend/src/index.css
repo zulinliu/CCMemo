@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Fonts ── */
+  --font-display: "LXGW WenKai", "Noto Serif SC", Georgia, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+
+  /* ── Ink (text) scale ── */
+  --ink: #1a1a1a;
+  --ink-light: #3d3d3a;
+  --ink-wash: #5e5d59;
+  --ink-faded: #706f69;
+
+  /* ── Rice (background) scale ── */
+  --rice: #f5f0e8;
+  --rice-medium: #ebe6da;
+  --rice-dark: #e2dcd0;
+
+  /* ── Surface neutrals ── */
+  --stone: #d1cfc5;
+  --stone-dark: #9a9992;
+
+  /* ── Brand accent: Cinnabar ── */
+  --cinnabar: #c23a2e;
+  --cinnabar-hover: #d44a3e;
+  --cinnabar-ghost: oklch(0.50 0.15 25 / 0.08);
+  --cinnabar-subtle: oklch(0.50 0.15 25 / 0.12);
+
+  /* ── Semantic accents ── */
+  --indigo: #2c5f7c;
+  --mineral: #4a7c5c;
+  --ochre: #a67c52;
+  --fig: #9c4a6a;
+
+  /* ── Status colors ── */
+  --status-active: var(--mineral);
+  --status-completed: var(--ink-light);
+  --status-interrupted: var(--fig);
+  --status-failed: var(--cinnabar);
+
+  /* ── Status backgrounds (oklch, 12% opacity) ── */
+  --status-active-bg: oklch(0.47 0.07 150 / 0.12);
+  --status-completed-bg: oklch(0.40 0.01 80 / 0.12);
+  --status-interrupted-bg: oklch(0.45 0.10 340 / 0.12);
+  --status-failed-bg: oklch(0.50 0.15 25 / 0.12);
+
+  /* ── Timeline event colors ── */
+  --timeline-user: var(--indigo);
+  --timeline-ai: var(--mineral);
+  --timeline-file: var(--ochre);
+  --timeline-command: var(--ink-faded);
+  --timeline-error: var(--cinnabar);
+
+  /* ── Timeline event backgrounds ── */
+  --timeline-user-bg: oklch(0.50 0.06 230 / 0.12);
+  --timeline-ai-bg: oklch(0.47 0.07 150 / 0.12);
+  --timeline-file-bg: oklch(0.62 0.06 55 / 0.12);
+  --timeline-command-bg: oklch(0.50 0.01 80 / 0.12);
+  --timeline-error-bg: oklch(0.50 0.15 25 / 0.12);
+
+  /* ── Spacing scale ── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+
+  /* ── Radius scale ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+  --radius-stamp: 50%;
+
+  /* ── Control heights ── */
+  --height-control-sm: 32px;
+  --height-control-md: 36px;
+  --height-control-lg: 40px;
+  --height-control-xl: 44px;
+  --height-bar-sm: 48px;
+  --height-bar-lg: 56px;
+
+  /* ── Layout widths ── */
+  --width-sidebar: 320px;
+  --width-detail: 320px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 1px 2px rgba(26, 26, 26, 0.04), 0 2px 8px rgba(26, 26, 26, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(26, 26, 26, 0.06), 0 4px 16px rgba(26, 26, 26, 0.1);
+  --shadow-card-selected: 0 2px 4px rgba(194, 58, 46, 0.08), 0 4px 16px rgba(194, 58, 46, 0.12);
+  --shadow-elevated: 0 4px 3px rgba(26, 26, 26, 0.03), 0 10px 8px rgba(26, 26, 26, 0.04), 0 34px 27px rgba(26, 26, 26, 0.05);
+}
+
+/* ── Light theme ── */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg-primary: var(--rice);
+  --color-bg-secondary: var(--rice-medium);
+  --color-bg-tertiary: var(--rice-dark);
+  --color-bg-elevated: #ffffff;
+
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-light);
+  --color-text-tertiary: var(--ink-wash);
+  --color-text-muted: var(--ink-faded);
+
+  --color-border-primary: rgba(26, 26, 26, 0.10);
+  --color-border-secondary: var(--stone);
+  --color-border-focus: var(--cinnabar);
+
+  --color-surface-hover: rgba(26, 26, 26, 0.04);
+  --color-surface-active: rgba(26, 26, 26, 0.08);
+
+  --color-card-bg: #ffffff;
+  --color-card-border: rgba(26, 26, 26, 0.07);
+  --color-card-selected-bg: var(--cinnabar-ghost);
+  --color-card-selected-border: var(--cinnabar);
+
+  --color-accent: var(--cinnabar);
+  --color-accent-hover: var(--cinnabar-hover);
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg-primary: var(--ink);
+  --color-bg-secondary: #1e1e1c;
+  --color-bg-tertiary: #2a2a28;
+  --color-bg-elevated: var(--ink-light);
+
+  --color-text-primary: var(--rice);
+  --color-text-secondary: var(--stone);
+  --color-text-tertiary: #a5a49e;
+  --color-text-muted: #98978f;
+
+  --color-border-primary: rgba(245, 240, 232, 0.10);
+  --color-border-secondary: var(--ink-light);
+  --color-border-focus: var(--cinnabar-hover);
+
+  --color-surface-hover: rgba(245, 240, 232, 0.05);
+  --color-surface-active: rgba(245, 240, 232, 0.10);
+
+  --color-card-bg: #2c2b29;
+  --color-card-border: rgba(245, 240, 232, 0.12);
+  --color-card-selected-bg: oklch(0.55 0.12 25 / 0.14);
+  --color-card-selected-border: var(--cinnabar-hover);
+
+  --color-accent: var(--cinnabar-hover);
+  --color-accent-hover: #e05a4e;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-card-selected: 0 2px 4px rgba(212, 74, 62, 0.15), 0 4px 16px rgba(212, 74, 62, 0.2);
+  --shadow-elevated: 0 4px 3px rgba(0, 0, 0, 0.15), 0 10px 8px rgba(0, 0, 0, 0.2), 0 34px 27px rgba(0, 0, 0, 0.25);
+}
+
+/* ── Paper texture (light only) ── */
+[data-theme="light"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* ── Global reset ── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  overscroll-behavior: none;
+  height: 100%;
+  position: relative;
+}
+
+/* Ensure content sits above paper texture */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── dvh fallback ── */
+@supports not (height: 100dvh) {
+  .h-dvh {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ── Focus ring ── */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-primary), 0 0 0 4px var(--color-border-focus);
+}
+
+/* ── Stitch-line separator ── */
+.stitch-line {
+  border: none;
+  border-top: 1px dashed var(--color-border-primary);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

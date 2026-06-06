@@ -1,11 +1,11 @@
 {
-  "name": "CCMemo",
-  "short_name": "CCMemo",
-  "description": "Claude Code Session Memory Manager",
+  "name": "墨途 · AI 编程行纪",
+  "short_name": "墨途",
+  "description": "搜索、检索并复用 Claude Code 历史会话与时间线事件",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf9f5",
-  "theme_color": "#C6613F",
+  "background_color": "#f5f0e8",
+  "theme_color": "#c23a2e",
   "orientation": "any",
   "icons": [
     {
